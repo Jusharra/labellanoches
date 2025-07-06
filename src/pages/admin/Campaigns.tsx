@@ -324,6 +324,7 @@ const Campaigns = () => {
   const canSendCampaign = (status: string) => {
     const normalizedStatus = status.toLowerCase().replace(/\s+/g, '_');
     return normalizedStatus === 'create_message_content' || 
+           normalizedStatus === 'message_content_ready' ||
            normalizedStatus === 'scheduled' || 
            normalizedStatus === 'draft';
   };
