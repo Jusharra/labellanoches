@@ -307,6 +307,15 @@ const Campaigns = () => {
     }
   };
 
+  const handleViewAnalytics = (campaignId: string) => {
+    const campaign = campaigns.find(c => c.id === campaignId);
+    if (campaign) {
+      toast.success(`Viewing analytics for "${campaign.name}"`);
+      // In a real implementation, this would navigate to an analytics page or open a modal
+      console.log('Viewing analytics for campaign:', campaignId);
+    }
+  };
+
   const fetchMediaAssets = async () => {
     try {
       // Placeholder for media library - in real implementation, this would fetch from media_library table
@@ -557,6 +566,7 @@ const Campaigns = () => {
                         
                         {/* Analytics Icon */}
                         <button
+                          onClick={() => handleViewAnalytics(campaign.id)}
                           className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
                           title="View analytics"
                         >
