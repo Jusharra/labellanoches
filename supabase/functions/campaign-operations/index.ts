@@ -189,6 +189,80 @@ Deno.serve(async (req) => {
 
     // POST /campaign-operations/campaigns - Create new campaign
     if (req.method === 'POST' && pathname.endsWith('/campaigns')) {
+      // Extract authorization header
+      const authHeader = req.headers.get('authorization')
+      if (!authHeader) {
+        const errorResponse: ErrorResponse = {
+          success: false,
+          error: 'No authorization header provided'
+        }
+        
+        return new Response(
+          JSON.stringify(errorResponse),
+          { 
+            status: 401, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+
+      // Create authenticated Supabase client to get user info
+      const supabaseAuth = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_ANON_KEY')!,
+        {
+          global: {
+            headers: {
+              Authorization: authHeader
+            }
+          }
+        }
+      )
+
+      // Get authenticated user
+      const { data: { user }, error: authError } = await supabaseAuth.auth.getUser()
+      
+      if (authError || !user) {
+        console.error('Auth error:', authError)
+        const errorResponse: ErrorResponse = {
+          success: false,
+          error: 'Invalid or expired authentication token',
+          details: authError
+        }
+        
+        return new Response(
+          JSON.stringify(errorResponse),
+          { 
+            status: 401, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+
+      // Verify user exists in user_profiles table
+      const { data: userProfile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single()
+
+      if (profileError || !userProfile) {
+        console.error('User profile not found:', profileError)
+        const errorResponse: ErrorResponse = {
+          success: false,
+          error: 'User profile not found. Please complete your profile setup.',
+          details: profileError
+        }
+        
+        return new Response(
+          JSON.stringify(errorResponse),
+          { 
+            status: 403, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+
       let campaignData
       
       try {
@@ -237,9 +311,6 @@ Deno.serve(async (req) => {
         )
       }
 
-      // Get a placeholder created_by UUID (in real implementation, this would come from auth)
-      const placeholderUserId = '00000000-0000-0000-0000-000000000000'
-
       // Determine schedule time
       let scheduledTime = null
       if (campaignData.scheduledDate && campaignData.scheduleTime) {
@@ -256,7 +327,7 @@ Deno.serve(async (req) => {
         channel: campaignData.channel,
         scheduled_time: scheduledTime,
         status: status,
-        created_by: placeholderUserId,
+        created_by: user.id,
         campaign_type: campaignData.campaignType || 'Regular Campaign',
         media_url: campaignData.mediaUrl && campaignData.mediaUrl.trim() !== '' ? campaignData.mediaUrl : null,
         target_contact_lists: campaignData.selectedLists || [],
