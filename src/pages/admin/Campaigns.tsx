@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Send, Trash2, BarChart3, Calendar, MessageSquare, RefreshCw } from 'lucide-react';
+import { Plus, Edit, Send, Trash2, BarChart3, Calendar, MessageSquare, RefreshCw, Upload, Image } from 'lucide-react';
 import { useTemplates } from '../../components/AdminLayout';
 import toast from 'react-hot-toast';
 
@@ -31,6 +31,8 @@ const Campaigns = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [contactLists, setContactLists] = useState<any[]>([]);
   const [sendingCampaignId, setSendingCampaignId] = useState<string | null>(null);
+  const [showMediaLibrary, setShowMediaLibrary] = useState(false);
+  const [mediaAssets, setMediaAssets] = useState<any[]>([]);
 
   const [newCampaign, setNewCampaign] = useState({
     name: '',
@@ -299,6 +301,71 @@ const Campaigns = () => {
         console.error('Error deleting campaign:', error);
         toast.error('Failed to delete campaign. Please try again.');
       }
+    }
+  };
+
+  const fetchMediaAssets = async () => {
+    try {
+      // Placeholder for media library - in real implementation, this would fetch from media_library table
+      const sampleAssets = [
+        {
+          id: '1',
+          title: 'Weekend Special',
+          access_link: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=600',
+          media_type: 'image'
+        },
+        {
+          id: '2',
+          title: 'Pasta Night',
+          access_link: 'https://images.pexels.com/photos/1640772/pexels-photo-1640772.jpeg?auto=compress&cs=tinysrgb&w=600',
+          media_type: 'image'
+        },
+        {
+          id: '3',
+          title: 'Fresh Ingredients',
+          access_link: 'https://images.pexels.com/photos/1435904/pexels-photo-1435904.jpeg?auto=compress&cs=tinysrgb&w=600',
+          media_type: 'image'
+        }
+      ];
+      setMediaAssets(sampleAssets);
+    } catch (error) {
+      console.error('Error fetching media assets:', error);
+    }
+  };
+
+  const handleSelectTemplate = (templateContent: string, isEditMode = false) => {
+    if (isEditMode) {
+      setEditCampaign({ ...editCampaign, messageContent: templateContent });
+    } else {
+      setNewCampaign({ ...newCampaign, messageContent: templateContent });
+    }
+  };
+
+  const handleSelectMediaAsset = (assetUrl: string, isEditMode = false) => {
+    if (isEditMode) {
+      setEditCampaign({ ...editCampaign, mediaUrl: assetUrl });
+    } else {
+      setNewCampaign({ ...newCampaign, mediaUrl: assetUrl });
+    }
+    setShowMediaLibrary(false);
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>, isEditMode = false) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // In a real implementation, this would upload to Supabase Storage
+      // For now, we'll simulate the upload process
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        if (isEditMode) {
+          setEditCampaign({ ...editCampaign, mediaUrl: dataUrl });
+        } else {
+          setNewCampaign({ ...newCampaign, mediaUrl: dataUrl });
+        }
+        toast.success('Image uploaded successfully!');
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -608,6 +675,30 @@ const Campaigns = () => {
                     </div>
                   </div>
 
+                  {/* Template Selection */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Select Template (Optional)
+                    </label>
+                    <div className="grid grid-cols-2 gap-2 mb-4">
+                      {templates.slice(0, 6).map((template) => (
+                        <button
+                          key={template.id}
+                          type="button"
+                          onClick={() => handleSelectTemplate(template.content)}
+                          className="p-3 text-left border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                        >
+                          <div className="text-sm font-medium text-gray-900 dark:text-white mb-1">
+                            {template.name}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
+                            {template.content.substring(0, 60)}...
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div>
                     <label htmlFor="messageContent" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Message Content *
@@ -629,14 +720,37 @@ const Campaigns = () => {
                     <label htmlFor="mediaUrl" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Media URL (Optional)
                     </label>
-                    <input
-                      type="url"
-                      id="mediaUrl"
-                      value={newCampaign.mediaUrl}
-                      onChange={(e) => setNewCampaign({ ...newCampaign, mediaUrl: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                      placeholder="https://example.com/image.jpg"
-                    />
+                    <div className="flex space-x-2">
+                      <input
+                        type="url"
+                        id="mediaUrl"
+                        value={newCampaign.mediaUrl}
+                        onChange={(e) => setNewCampaign({ ...newCampaign, mediaUrl: e.target.value })}
+                        className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                        placeholder="https://example.com/image.jpg"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          fetchMediaAssets();
+                          setShowMediaLibrary(true);
+                        }}
+                        className="px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center space-x-1"
+                      >
+                        <Image className="h-4 w-4" />
+                        <span>Select</span>
+                      </button>
+                      <label className="px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center space-x-1 cursor-pointer">
+                        <Upload className="h-4 w-4" />
+                        <span>Upload</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleFileUpload(e, false)}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -785,6 +899,30 @@ const Campaigns = () => {
                     </div>
                   </div>
 
+                  {/* Template Selection for Edit */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Select Template (Optional)
+                    </label>
+                    <div className="grid grid-cols-2 gap-2 mb-4">
+                      {templates.slice(0, 6).map((template) => (
+                        <button
+                          key={template.id}
+                          type="button"
+                          onClick={() => handleSelectTemplate(template.content, true)}
+                          className="p-3 text-left border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                        >
+                          <div className="text-sm font-medium text-gray-900 dark:text-white mb-1">
+                            {template.name}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
+                            {template.content.substring(0, 60)}...
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div>
                     <label htmlFor="editMessageContent" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Message Content *
@@ -806,14 +944,37 @@ const Campaigns = () => {
                     <label htmlFor="editMediaUrl" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Media URL (Optional)
                     </label>
-                    <input
-                      type="url"
-                      id="editMediaUrl"
-                      value={editCampaign.mediaUrl}
-                      onChange={(e) => setEditCampaign({ ...editCampaign, mediaUrl: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                      placeholder="https://example.com/image.jpg"
-                    />
+                    <div className="flex space-x-2">
+                      <input
+                        type="url"
+                        id="editMediaUrl"
+                        value={editCampaign.mediaUrl}
+                        onChange={(e) => setEditCampaign({ ...editCampaign, mediaUrl: e.target.value })}
+                        className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                        placeholder="https://example.com/image.jpg"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          fetchMediaAssets();
+                          setShowMediaLibrary(true);
+                        }}
+                        className="px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center space-x-1"
+                      >
+                        <Image className="h-4 w-4" />
+                        <span>Select</span>
+                      </button>
+                      <label className="px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center space-x-1 cursor-pointer">
+                        <Upload className="h-4 w-4" />
+                        <span>Upload</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleFileUpload(e, true)}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -856,6 +1017,66 @@ const Campaigns = () => {
                 <button
                   onClick={() => setShowEditModal(false)}
                   className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Media Library Modal */}
+      {showMediaLibrary && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+
+            <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+              <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                  Select Media Asset
+                </h3>
+                
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {mediaAssets.map((asset) => (
+                    <div
+                      key={asset.id}
+                      onClick={() => handleSelectMediaAsset(asset.access_link, showEditModal)}
+                      className="cursor-pointer border-2 border-transparent hover:border-primary rounded-lg overflow-hidden transition-colors"
+                    >
+                      <img
+                        src={asset.access_link}
+                        alt={asset.title}
+                        className="w-full h-32 object-cover"
+                      />
+                      <div className="p-2">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                          {asset.title}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {asset.media_type}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {mediaAssets.length === 0 && (
+                  <div className="text-center py-8">
+                    <Image className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No media assets found</h3>
+                    <p className="text-gray-500 dark:text-gray-400">Upload some images to get started.</p>
+                  </div>
+                )}
+              </div>
+              
+              <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  onClick={() => setShowMediaLibrary(false)}
+                  className="w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:w-auto sm:text-sm"
                 >
                   Cancel
                 </button>
