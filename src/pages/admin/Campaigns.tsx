@@ -681,7 +681,7 @@ const Campaigns = () => {
                       Select Template (Optional)
                     </label>
                     <div className="grid grid-cols-2 gap-2 mb-4">
-                      {templates.slice(0, 6).map((template) => (
+                      {templates?.slice(0, 6).map((template) => (
                         <button
                           key={template.id}
                           type="button"
@@ -712,7 +712,7 @@ const Campaigns = () => {
                       placeholder="Enter your message content..."
                     />
                     <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      Character count: {newCampaign.messageContent.length} / 160 (SMS limit)
+                      Character count: {newCampaign.messageContent?.length || 0} / 160 (SMS limit)
                     </p>
                   </div>
 
@@ -905,7 +905,7 @@ const Campaigns = () => {
                       Select Template (Optional)
                     </label>
                     <div className="grid grid-cols-2 gap-2 mb-4">
-                      {templates.slice(0, 6).map((template) => (
+                      {templates?.slice(0, 6).map((template) => (
                         <button
                           key={template.id}
                           type="button"
@@ -936,7 +936,7 @@ const Campaigns = () => {
                       placeholder="Enter your message content..."
                     />
                     <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      Character count: {editCampaign.messageContent.length} / 160 (SMS limit)
+                      Character count: {editCampaign.messageContent?.length || 0} / 160 (SMS limit)
                     </p>
                   </div>
 
