@@ -171,9 +171,8 @@ Deno.serve(async (req) => {
               minute: '2-digit' 
             }) : '',
           mediaUrl: campaign.media_url || '',
-          messageContent: updatedCampaign.message,
-          webhookUrl: updatedCampaign.webhook_url
-          webhookUrl: newCampaign.webhook_url
+          messageContent: campaign.message,
+          webhookUrl: campaign.webhook_url
         }
       }) || []
 
