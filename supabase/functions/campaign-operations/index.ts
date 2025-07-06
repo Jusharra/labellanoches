@@ -237,9 +237,6 @@ Deno.serve(async (req) => {
         )
       }
 
-      // Get a placeholder created_by UUID (in real implementation, this would come from auth)
-      const placeholderUserId = '00000000-0000-0000-0000-000000000000'
-
       // Determine schedule time
       let scheduledTime = null
       if (campaignData.scheduledDate && campaignData.scheduleTime) {
@@ -256,7 +253,7 @@ Deno.serve(async (req) => {
         channel: campaignData.channel,
         scheduled_time: scheduledTime,
         status: status,
-        created_by: placeholderUserId,
+        created_by: null,
         campaign_type: campaignData.campaignType || 'Regular Campaign',
         media_url: campaignData.mediaUrl && campaignData.mediaUrl.trim() !== '' ? campaignData.mediaUrl : null,
         target_contact_lists: campaignData.selectedLists || [],
