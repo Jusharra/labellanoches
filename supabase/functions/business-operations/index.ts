@@ -225,6 +225,10 @@ Deno.serve(async (req) => {
         }
 
         updatedBusiness = newBusiness
+      } else {
+        // Business was updated successfully
+        // The trigger function will automatically update related campaigns
+        console.log('Business updated successfully, webhook URLs will be synced automatically via trigger')
       }
 
       const successResponse: SuccessResponse = {

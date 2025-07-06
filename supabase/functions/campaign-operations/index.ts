@@ -225,7 +225,8 @@ Deno.serve(async (req) => {
       if (businessError || !business) {
         const errorResponse: ErrorResponse = {
           success: false,
-          error: 'Could not find business to associate campaign with'
+          error: 'Could not find business to associate campaign with',
+          details: businessError
         }
         
         return new Response(
@@ -422,6 +423,24 @@ Deno.serve(async (req) => {
 
       if (updateData.webhook_url !== undefined) {
         campaignUpdateData.webhook_url = updateData.webhook_url && updateData.webhook_url.trim() !== '' ? updateData.webhook_url : null
+      }
+
+      // Always ensure webhook_url is synced with business settings when updating
+      // First, fetch the campaign's business_id and the business's current webhook_url
+      const { data: campaignWithBusiness, error: fetchError } = await supabase
+        .from('campaigns')
+        .select(`
+          business_id,
+          businesses!inner(webhook_url)
+        `)
+        .eq('id', campaignId)
+        .single()
+
+      if (fetchError) {
+        console.error('Error fetching campaign business info:', fetchError)
+      } else if (campaignWithBusiness?.businesses?.webhook_url) {
+        // Sync the webhook URL from the business
+        campaignUpdateData.webhook_url = campaignWithBusiness.businesses.webhook_url
       }
 
       // Handle scheduled time from separate date and time fields
