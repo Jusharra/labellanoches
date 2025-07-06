@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Send, Trash2, BarChart3, Calendar, MessageSquare, RefreshCw, Upload, Image } from 'lucide-react';
+import { useAuth } from '@clerk/clerk-react';
 import { useTemplates } from '../../components/AdminLayout';
 import toast from 'react-hot-toast';
 
@@ -24,6 +25,7 @@ interface Campaign {
 }
 
 const Campaigns = () => {
+  const { getToken } = useAuth();
   const { templates } = useTemplates();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,9 +70,10 @@ const Campaigns = () => {
   const fetchCampaigns = async () => {
     try {
       setLoading(true);
+      const token = await getToken();
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/campaign-operations/campaigns`, {
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
@@ -96,9 +99,10 @@ const Campaigns = () => {
 
   const fetchContactLists = async () => {
     try {
+      const token = await getToken();
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/contact-list-operations/lists`, {
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
@@ -122,10 +126,11 @@ const Campaigns = () => {
   const handleCreateCampaign = async () => {
     if (newCampaign.name.trim() && newCampaign.messageContent.trim()) {
       try {
+        const token = await getToken();
         const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/campaign-operations/campaigns`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(newCampaign)
@@ -185,10 +190,11 @@ const Campaigns = () => {
   const handleUpdateCampaign = async () => {
     if (editCampaign.name.trim() && editCampaign.messageContent.trim()) {
       try {
+        const token = await getToken();
         const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/campaign-operations/campaigns/${editCampaign.id}`, {
           method: 'PUT',
           headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
@@ -238,10 +244,11 @@ const Campaigns = () => {
     try {
       setSendingCampaignId(campaignId);
       
+      const token = await getToken();
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/campaign-operations/campaigns/${campaignId}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -276,10 +283,11 @@ const Campaigns = () => {
     const campaign = campaigns.find(c => c.id === campaignId);
     if (campaign && window.confirm(`Are you sure you want to delete "${campaign.name}"? This action cannot be undone.`)) {
       try {
+        const token = await getToken();
         const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/campaign-operations/campaigns/${campaignId}`, {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           }
         });
