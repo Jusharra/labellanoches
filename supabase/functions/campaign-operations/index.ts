@@ -37,9 +37,60 @@ Deno.serve(async (req) => {
 
     // GET /campaign-operations/campaigns - Get all campaigns
     if (req.method === 'GET' && pathname.endsWith('/campaigns')) {
+      // Extract authorization header for authenticated requests
+      const authHeader = req.headers.get('authorization')
+      if (!authHeader) {
+        const errorResponse: ErrorResponse = {
+          success: false,
+          error: 'No authorization header provided'
+        }
+        
+        return new Response(
+          JSON.stringify(errorResponse),
+          { 
+            status: 401, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+
+      // Create authenticated Supabase client for user context
+      const supabaseAuth = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_ANON_KEY')!,
+        {
+          global: {
+            headers: {
+              Authorization: authHeader
+            }
+          }
+        }
+      )
+
+      // Get authenticated user to verify they exist
+      const { data: { user }, error: authError } = await supabaseAuth.auth.getUser()
+      
+      if (authError || !user) {
+        console.error('Auth error in GET campaigns:', authError)
+        const errorResponse: ErrorResponse = {
+          success: false,
+          error: 'Invalid or expired authentication token',
+          details: authError
+        }
+        
+        return new Response(
+          JSON.stringify(errorResponse),
+          { 
+            status: 401, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+
       const businessId = searchParams.get('business_id')
 
-      let query = supabase
+      // Use authenticated client for querying campaigns to respect RLS
+      let query = supabaseAuth
         .from('campaigns')
         .select('*')
 
@@ -80,7 +131,7 @@ Deno.serve(async (req) => {
       // Fetch contact list names for all unique list IDs
       let listNamesMap: Map<string, string> = new Map();
       if (allListIds.size > 0) {
-        const { data: contactLists, error: listsError } = await supabase
+        const { data: contactLists, error: listsError } = await supabaseAuth
           .from('contact_lists')
           .select('id, list_name')
           .in('id', Array.from(allListIds));
@@ -98,7 +149,7 @@ Deno.serve(async (req) => {
       // Fetch actual sent counts from campaign_logs table
       let sentCountsMap: Map<string, number> = new Map();
       if (campaignIds.length > 0) {
-        const { data: campaignLogs, error: logsError } = await supabase
+        const { data: campaignLogs, error: logsError } = await supabaseAuth
           .from('campaign_logs')
           .select('campaign_id')
           .in('campaign_id', campaignIds)
@@ -171,7 +222,7 @@ Deno.serve(async (req) => {
               minute: '2-digit' 
             }) : '',
           mediaUrl: campaign.media_url || '',
-          messageContent: campaign.message,
+          messageContent: campaign.message || '',
           webhookUrl: campaign.webhook_url
         }
       }) || []
@@ -409,7 +460,7 @@ Deno.serve(async (req) => {
         openRate: 'N/A',
         createdDate: new Date(newCampaign.created_at).toISOString().split('T')[0],
         campaignType: newCampaign.campaign_type,
-        business: 'bella-vista',
+        business: 'la-bella-noches',
         selectedLists: campaignData.selectedLists || [],
         templateId: 'custom',
         channel: newCampaign.channel,
@@ -420,7 +471,8 @@ Deno.serve(async (req) => {
             minute: '2-digit' 
           }) : '',
         mediaUrl: newCampaign.media_url,
-        messageContent: newCampaign.message
+        messageContent: newCampaign.message,
+        webhookUrl: newCampaign.webhook_url
       }
 
       const successResponse: SuccessResponse = {

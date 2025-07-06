@@ -22,6 +22,7 @@ interface Campaign {
   scheduleTime: string;
   mediaUrl: string;
   messageContent: string;
+  webhookUrl?: string;
 }
 
 const Campaigns = () => {
