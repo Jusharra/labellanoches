@@ -1,0 +1,5 @@
+# Supabase Edge Functions Configuration
+
+[scheduleChecker]
+# Run every minute to check for campaigns that are due to be sent
+schedule = "*/1 * * * *"
