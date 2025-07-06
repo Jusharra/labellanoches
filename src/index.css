@@ -10,3 +10,48 @@ body {
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Playfair Display', serif;
 }
+
+/* Toast notification CSS variables for better theme support */
+:root {
+  --toast-bg: #ffffff;
+  --toast-text: #1f2937;
+  --toast-border: #e5e7eb;
+}
+
+.dark {
+  --toast-bg: #374151;
+  --toast-text: #f9fafb;
+  --toast-border: #4b5563;
+}
+
+/* Enhanced toast animations */
+.Toaster__toast {
+  animation: toast-enter 0.35s cubic-bezier(0.21, 1.02, 0.73, 1) forwards;
+  transform-origin: top center;
+}
+
+.Toaster__toast--exit {
+  animation: toast-exit 0.3s ease-in forwards;
+}
+
+@keyframes toast-enter {
+  0% {
+    transform: translateX(100%) scale(0.7);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0%) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes toast-exit {
+  0% {
+    transform: translateX(0%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100%) scale(0.7);
+    opacity: 0;
+  }
+}
