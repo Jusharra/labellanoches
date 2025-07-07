@@ -35,8 +35,8 @@ Deno.serve(async (req) => {
 
     console.log(`${req.method} ${pathname}`)
 
-    // GET /campaigns - Get all campaigns
-    if (req.method === 'GET' && pathname === '/functions/v1/campaign-operations/campaigns') {
+    // GET /campaign-operations/campaigns - Get all campaigns
+    if (req.method === 'GET' && pathname.endsWith('/campaigns')) {
       const businessId = searchParams.get('business_id')
 
       let query = supabase
@@ -187,8 +187,8 @@ Deno.serve(async (req) => {
       )
     }
 
-    // POST /campaigns - Create new campaign
-    if (req.method === 'POST' && pathname === '/functions/v1/campaign-operations/campaigns') {
+    // POST /campaign-operations/campaigns - Create new campaign
+    if (req.method === 'POST' && pathname.endsWith('/campaigns')) {
       let campaignData
       
       try {
@@ -362,9 +362,9 @@ Deno.serve(async (req) => {
       )
     }
 
-    // PUT /campaigns/:id - Update campaign
-    if (req.method === 'PUT' && pathname.startsWith('/functions/v1/campaign-operations/campaigns/') && pathname !== '/functions/v1/campaign-operations/campaigns') {
-      const campaignId = pathname.split('/functions/v1/campaign-operations/campaigns/')[1]
+    // PUT /campaign-operations/campaigns/:id - Update campaign
+    if (req.method === 'PUT' && pathname.includes('/campaigns/')) {
+      const campaignId = pathname.split('/').pop()
       
       let updateData
       
@@ -553,9 +553,9 @@ Deno.serve(async (req) => {
       )
     }
 
-    // DELETE /campaigns/:id - Delete campaign  
-    if (req.method === 'DELETE' && pathname.startsWith('/functions/v1/campaign-operations/campaigns/') && pathname !== '/functions/v1/campaign-operations/campaigns') {
-      const campaignId = pathname.split('/functions/v1/campaign-operations/campaigns/')[1]
+    // DELETE /campaign-operations/campaigns/:id - Delete campaign
+    if (req.method === 'DELETE' && pathname.includes('/campaigns/')) {
+      const campaignId = pathname.split('/').pop()
 
       const { error } = await supabase
         .from('campaigns')
