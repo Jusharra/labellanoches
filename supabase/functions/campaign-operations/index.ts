@@ -516,7 +516,7 @@ Deno.serve(async (req) => {
         name: updatedCampaign.title,
         status: updatedCampaign.status,
         listName: listName,
-        templateName: 'Custom Message',
+        templateName: updatedCampaign.message_template || 'Custom Message',
         scheduledDate: updatedCampaign.scheduled_time ? 
           new Date(updatedCampaign.scheduled_time).toISOString().split('T')[0] : '',
         sentCount: updatedCampaign.status === 'sent' ? 145 : 0,
