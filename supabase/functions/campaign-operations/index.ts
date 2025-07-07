@@ -153,7 +153,7 @@ Deno.serve(async (req) => {
           name: campaign.title || 'Untitled Campaign',
           status: campaign.status || 'draft',
           listName: listName,
-          templateName: 'Custom Message', // We'll enhance this later with template lookup
+          templateName: campaign.message_template || 'Custom Message',
           scheduledDate: campaign.scheduled_time ? 
             new Date(campaign.scheduled_time).toISOString().split('T')[0] : '',
           sentCount: sentCount,
@@ -328,7 +328,7 @@ Deno.serve(async (req) => {
         name: newCampaign.title,
         status: newCampaign.status,
         listName: listName,
-        templateName: 'Custom Message',
+        templateName: newCampaign.message_template || 'Custom Message',
         scheduledDate: newCampaign.scheduled_time ? 
           new Date(newCampaign.scheduled_time).toISOString().split('T')[0] : '',
         sentCount: 0,
