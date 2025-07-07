@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Send, Trash2, BarChart3, Calendar, MessageSquare, RefreshCw, Upload, Image } from 'lucide-react';
 import { useAuth } from '@clerk/clerk-react';
 import { useTemplates } from '../../components/AdminLayout';
+import CampaignAnalyticsModal from '../../components/CampaignAnalyticsModal';
 import toast from 'react-hot-toast';
 
 interface Campaign {
@@ -36,6 +37,8 @@ const Campaigns = () => {
   const [sendingCampaignId, setSendingCampaignId] = useState<string | null>(null);
   const [showMediaLibrary, setShowMediaLibrary] = useState(false);
   const [mediaAssets, setMediaAssets] = useState<any[]>([]);
+  const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
+  const [selectedCampaignForAnalytics, setSelectedCampaignForAnalytics] = useState<Campaign | null>(null);
 
   const [newCampaign, setNewCampaign] = useState({
     name: '',
@@ -307,13 +310,14 @@ const Campaigns = () => {
     }
   };
 
-  const handleViewAnalytics = (campaignId: string) => {
-    const campaign = campaigns.find(c => c.id === campaignId);
-    if (campaign) {
-      toast.success(`Viewing analytics for "${campaign.name}"`);
-      // In a real implementation, this would navigate to an analytics page or open a modal
-      console.log('Viewing analytics for campaign:', campaignId);
-    }
+  const handleViewAnalytics = (campaign: Campaign) => {
+    setSelectedCampaignForAnalytics(campaign);
+    setShowAnalyticsModal(true);
+  };
+
+  const handleCloseAnalyticsModal = () => {
+    setShowAnalyticsModal(false);
+    setSelectedCampaignForAnalytics(null);
   };
 
   const fetchMediaAssets = async () => {
@@ -566,7 +570,7 @@ const Campaigns = () => {
                         
                         {/* Analytics Icon */}
                         <button
-                          onClick={() => handleViewAnalytics(campaign.id)}
+                          onClick={() => handleViewAnalytics(campaign)}
                           className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
                           title="View analytics"
                         >
@@ -1097,6 +1101,14 @@ const Campaigns = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Analytics Modal */}
+      {showAnalyticsModal && selectedCampaignForAnalytics && (
+        <CampaignAnalyticsModal
+          campaign={selectedCampaignForAnalytics}
+          onClose={handleCloseAnalyticsModal}
+        />
       )}
     </div>
   );
