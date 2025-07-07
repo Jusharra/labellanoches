@@ -84,7 +84,7 @@ const Menu = () => {
 
   const handleOrder = (itemName: string, orderType: 'sms' | 'whatsapp') => {
     const message = encodeURIComponent(`I'd like to order ${itemName}`);
-    const phone = '+1234567890'; // Replace with your actual phone number
+    const phone = import.meta.env.VITE_BUSINESS_PHONE_NUMBER || '+18445437419';
     
     if (orderType === 'sms') {
       window.open(`sms:${phone}?body=${message}`, '_blank');
@@ -200,7 +200,7 @@ const Menu = () => {
             We'll confirm your order and provide pickup/delivery details.
           </p>
           <div className="text-sm text-gray-500 dark:text-gray-400">
-            <p>SMS: +1 (555) 123-4567 | WhatsApp: +1 (555) 123-4567</p>
+            <p>SMS: +1 (844) 543-7419 | WhatsApp: +1 (844) 543-7419</p>
             <p>Average preparation time: 15-25 minutes</p>
           </div>
         </div>

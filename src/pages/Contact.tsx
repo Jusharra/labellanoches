@@ -37,8 +37,8 @@ const Contact = () => {
     {
       icon: <Phone className="h-6 w-6 text-primary" />,
       title: 'Phone',
-      details: '+1 (555) 123-4567',
-      action: 'tel:+15551234567',
+      details: '+1 (844) 543-7419',
+      action: 'tel:+18445437419',
     },
     {
       icon: <Mail className="h-6 w-6 text-primary" />,

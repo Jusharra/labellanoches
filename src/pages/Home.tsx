@@ -113,7 +113,7 @@ const Home = () => {
               <div className="flex items-center space-x-4">
                 <span className="text-2xl font-bold text-primary">$28</span>
                 <a
-                  href="sms:+1234567890?body=I'd%20like%20to%20order%20the%20Signature%20Salmon%20dish%20from%20La%20Bella%20Noches"
+                  href={`sms:${import.meta.env.VITE_BUSINESS_PHONE_NUMBER || '+18445437419'}?body=I'd%20like%20to%20order%20the%20Signature%20Salmon%20dish%20from%20La%20Bella%20Noches`}
                   className="bg-primary text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary/90 transition-colors"
                 >
                   Order via SMS

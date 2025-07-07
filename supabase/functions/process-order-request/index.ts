@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
     // Step 3: Create order record
     const orderData = {
       customer_name: customerName || 'Unknown Customer',
-      customer_phone: customerPhone || '+1234567890',
+      customer_phone: customerPhone || Deno.env.get('BUSINESS_PHONE_NUMBER') || '+18445437419',
       items_ordered: validItems,
       total_price: totalPrice,
       channel: channel || 'SMS',

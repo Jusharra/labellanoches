@@ -138,7 +138,7 @@ const About = () => {
               <div>
                 <h3 className="font-semibold text-accent dark:text-white mb-2">Contact</h3>
                 <p className="text-gray-600 dark:text-gray-300">
-                  Phone: +1 (555) 123-4567<br />
+                  Phone: +1 (844) 543-7419<br />
                   Email: hello@bellavista.com
                 </p>
               </div>

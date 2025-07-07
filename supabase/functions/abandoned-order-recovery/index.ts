@@ -280,7 +280,7 @@ Your order for ${itemsList} is still waiting for you. To make it even better, we
 Order #${orderShortId}
 Total: $${totalPrice.toFixed(2)} + FREE dessert! 🍰
 
-Reply "COMPLETE" to finish your order or call (555) 123-4567. Offer valid for the next 2 hours.
+Reply "COMPLETE" to finish your order or call (844) 543-7419. Offer valid for the next 2 hours.
 
 La Bella Noches - Authentic flavors you deserve! ✨`
 
@@ -294,7 +294,7 @@ Order #${orderShortId}
 Original Total: $${totalPrice.toFixed(2)}
 Your Price: $${(totalPrice * 0.85).toFixed(2)} + FREE appetizer! 🎉
 
-This exclusive offer expires in 4 hours. Reply "FINISH" or call (555) 123-4567 to claim it.
+This exclusive offer expires in 4 hours. Reply "FINISH" or call (844) 543-7419 to claim it.
 
 La Bella Noches - Come back, we're cooking something amazing! 👨‍🍳`
   }

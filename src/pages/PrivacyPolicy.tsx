@@ -230,7 +230,7 @@ const PrivacyPolicy = () => {
                   123 Gourmet Street, Foodie District
                 </p>
                 <p className="text-gray-600 dark:text-gray-300 mb-2">
-                  Phone: +1 (555) 123-4567
+                  Phone: +1 (844) 543-7419
                 </p>
                 <p className="text-gray-600 dark:text-gray-300 mb-4">
                   Email: privacy@labellanochesco.com

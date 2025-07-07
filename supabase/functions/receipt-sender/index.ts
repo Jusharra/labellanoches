@@ -198,7 +198,7 @@ TOTAL: $${totalPrice.toFixed(2)}
 Thank you for dining with La Bella Noches! 
 Your satisfaction is our priority.
 
-Questions? Reply to this message or call us at (555) 123-4567
+Questions? Reply to this message or call us at (844) 543-7419
 
 ---
 La Bella Noches
