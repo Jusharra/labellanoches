@@ -18,9 +18,7 @@ const ForgotPasswordPage = () => {
           <SignIn 
             path="/forgot-password"
             routing="path"
-            signUpUrl="/sign-up"
             afterSignInUrl="/"
-            afterSignInUrl="/admin"
             initialValues={{
               emailAddress: '',
             }}
