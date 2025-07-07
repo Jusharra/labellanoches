@@ -35,8 +35,8 @@ Deno.serve(async (req) => {
 
     console.log(`${req.method} ${pathname}`)
 
-    // GET /campaign-operations/campaigns - Get all campaigns
-    if (req.method === 'GET' && pathname.endsWith('/campaigns')) {
+    // GET /campaigns - Get all campaigns
+    if (req.method === 'GET' && pathname === '/campaigns') {
       const businessId = searchParams.get('business_id')
 
       let query = supabase
@@ -187,8 +187,8 @@ Deno.serve(async (req) => {
       )
     }
 
-    // POST /campaign-operations/campaigns - Create new campaign
-    if (req.method === 'POST' && pathname.endsWith('/campaigns')) {
+    // POST /campaigns - Create new campaign
+    if (req.method === 'POST' && pathname === '/campaigns') {
       let campaignData
       
       try {
@@ -362,9 +362,9 @@ Deno.serve(async (req) => {
       )
     }
 
-    // PUT /campaign-operations/campaigns/:id - Update campaign
-    if (req.method === 'PUT' && pathname.includes('/campaigns/')) {
-      const campaignId = pathname.split('/').pop()
+    // PUT /campaigns/:id - Update campaign
+    if (req.method === 'PUT' && pathname.startsWith('/campaigns/') && pathname !== '/campaigns') {
+      const campaignId = pathname.split('/campaigns/')[1]
       
       let updateData
       
@@ -553,9 +553,9 @@ Deno.serve(async (req) => {
       )
     }
 
-    // DELETE /campaign-operations/campaigns/:id - Delete campaign
-    if (req.method === 'DELETE' && pathname.includes('/campaigns/')) {
-      const campaignId = pathname.split('/').pop()
+    // DELETE /campaigns/:id - Delete campaign  
+    if (req.method === 'DELETE' && pathname.startsWith('/campaigns/') && pathname !== '/campaigns') {
+      const campaignId = pathname.split('/campaigns/')[1]
 
       const { error } = await supabase
         .from('campaigns')
