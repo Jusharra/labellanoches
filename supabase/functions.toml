@@ -1,5 +1,9 @@
 # Supabase Edge Functions Configuration
 
+[abandoned-order-recovery]
+# Run every 30 minutes to check for abandoned orders and send recovery messages
+schedule = "*/30 * * * *"
+
 [item-suggester]
 # Function to provide intelligent menu item suggestions
 
