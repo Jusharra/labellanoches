@@ -250,6 +250,7 @@ Deno.serve(async (req) => {
         business_id: business.id,
         title: campaignData.name,
         message: campaignData.messageContent,
+        message_template: campaignData.templateName || campaignData.selectedTemplate || 'Custom Message',
         channel: campaignData.channel,
         scheduled_time: scheduledTime,
         status: status,
@@ -406,6 +407,10 @@ Deno.serve(async (req) => {
         campaignUpdateData.message = updateData.message
       }
 
+      if (updateData.templateName !== undefined || updateData.selectedTemplate !== undefined) {
+        campaignUpdateData.message_template = updateData.templateName || updateData.selectedTemplate || 'Custom Message'
+      }
+
       if (updateData.channel !== undefined) {
         campaignUpdateData.channel = updateData.channel
       }
@@ -519,8 +524,8 @@ Deno.serve(async (req) => {
         templateName: updatedCampaign.message_template || 'Custom Message',
         scheduledDate: updatedCampaign.scheduled_time ? 
           new Date(updatedCampaign.scheduled_time).toISOString().split('T')[0] : '',
-        sentCount: updatedCampaign.status === 'sent' ? 145 : 0,
-        openRate: updatedCampaign.status === 'sent' ? '68%' : 'N/A',
+        sentCount: 0, // Will be calculated from campaign_logs
+        openRate: 'N/A', // Will be calculated from campaign_logs
         createdDate: new Date(updatedCampaign.created_at).toISOString().split('T')[0],
         campaignType: updatedCampaign.campaign_type,
         business: 'la-bella-noches',
