@@ -1,5 +1,8 @@
 # Supabase Edge Functions Configuration
 
+[item-suggester]
+# Function to provide intelligent menu item suggestions
+
 [receipt-sender]
 # Function to generate and send digital receipts via SMS/WhatsApp
 
