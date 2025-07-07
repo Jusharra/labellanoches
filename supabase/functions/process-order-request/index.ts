@@ -20,6 +20,18 @@ interface ProcessOrderRequest {
   channel?: 'SMS' | 'WhatsApp';
 }
 
+interface MakeWebhookPayload {
+  order_id: string;
+  customer_name: string;
+  customer_phone: string;
+  items_ordered: OrderItem[];
+  total_price: number;
+  channel: string;
+  status: string;
+  created_at: string;
+  confirmation_message: string;
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -31,6 +43,12 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+    // Get Make.com webhook URL from environment variables
+    const makeWebhookUrl = Deno.env.get('MAKE_ORDER_WEBHOOK_URL')
+    if (!makeWebhookUrl) {
+      console.warn('MAKE_ORDER_WEBHOOK_URL environment variable not set - webhook will be skipped')
+    }
 
     // Parse request body
     const { customerResponse, customerPhone, customerName, channel }: ProcessOrderRequest = await req.json()
@@ -140,11 +158,46 @@ Reply with any special instructions.
 
 Thank you for choosing La Bella Noches!`
 
-    // TODO: Implement actual SMS/WhatsApp sending here
-    // Example with Twilio:
-    // await sendSMS(customerPhone, confirmationMessage)
-    
-    console.log('Confirmation message ready:', confirmationMessage)
+    console.log('Order created successfully:', newOrder.id)
+
+    // Step 5: Trigger Make.com webhook
+    if (makeWebhookUrl) {
+      try {
+        console.log('Sending order data to Make.com webhook...')
+        
+        const webhookPayload: MakeWebhookPayload = {
+          order_id: newOrder.id,
+          customer_name: newOrder.customer_name,
+          customer_phone: newOrder.customer_phone,
+          items_ordered: validItems,
+          total_price: totalPrice,
+          channel: newOrder.channel,
+          status: newOrder.status,
+          created_at: newOrder.created_at,
+          confirmation_message: confirmationMessage
+        }
+
+        const webhookResponse = await fetch(makeWebhookUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(webhookPayload)
+        })
+
+        if (webhookResponse.ok) {
+          console.log('Successfully sent order to Make.com webhook')
+        } else {
+          console.error('Make.com webhook returned non-200 status:', webhookResponse.status, await webhookResponse.text())
+        }
+      } catch (webhookError) {
+        // Log the error but don't fail the entire order process
+        console.error('Failed to send data to Make.com webhook:', webhookError.message)
+        console.error('Order was still created successfully in database')
+      }
+    } else {
+      console.log('Make.com webhook URL not configured - skipping webhook call')
+    }
 
     return new Response(
       JSON.stringify({
