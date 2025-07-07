@@ -1,5 +1,8 @@
 # Supabase Edge Functions Configuration
 
+[receipt-sender]
+# Function to generate and send digital receipts via SMS/WhatsApp
+
 [scheduleChecker]
 # Run every minute to check for campaigns that are due to be sent
 schedule = "*/1 * * * *"
