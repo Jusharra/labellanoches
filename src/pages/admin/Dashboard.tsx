@@ -1,9 +1,53 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, MessageSquare, Send, TrendingUp } from 'lucide-react';
+import { createClient } from '@supabase/supabase-js';
+import toast from 'react-hot-toast';
+
+// Initialize Supabase client
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+);
 
 const Dashboard = () => {
-  // Initialize campaigns as empty array since campaign-operations function was removed
-  const campaigns: any[] = [];
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch campaigns from Supabase Edge Function
+  useEffect(() => {
+    const fetchCampaigns = async () => {
+      try {
+        setLoading(true);
+        
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/campaign-operations/campaigns`, {
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data?.success) {
+          setCampaigns(data.data || []);
+        } else {
+          throw new Error(data?.error || 'Failed to fetch campaigns');
+        }
+      } catch (error) {
+        console.error('Error fetching campaigns:', error);
+        toast.error('Failed to load campaigns');
+        setCampaigns([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCampaigns();
+  }, []);
   
   const stats = [
     {
@@ -38,14 +82,14 @@ const Dashboard = () => {
 
   // Get the most recent campaigns (limit to 5)
   const recentCampaigns = campaigns
-    .sort((a, b) => new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime())
+    .sort((a, b) => new Date(b.createdDate || '').getTime() - new Date(a.createdDate || '').getTime())
     .slice(0, 5)
     .map(campaign => ({
       id: campaign.id,
       name: campaign.name,
       status: campaign.status,
-      recipients: campaign.sentCount,
-      date: campaign.scheduledDate || campaign.createdDate
+      recipients: campaign.sentCount || 0,
+      date: campaign.scheduledDate || campaign.createdDate || ''
     }));
 
   return (
@@ -95,7 +139,12 @@ const Dashboard = () => {
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-lg font-medium text-gray-900 dark:text-white">Recent Campaigns</h2>
         </div>
-        {recentCampaigns.length > 0 ? (
+        {loading ? (
+          <div className="p-6 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-gray-500 dark:text-gray-400">Loading campaigns...</p>
+          </div>
+        ) : recentCampaigns.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-700">
