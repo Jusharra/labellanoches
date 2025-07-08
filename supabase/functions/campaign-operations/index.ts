@@ -24,9 +24,45 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Check for required environment variables
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+
+    if (!supabaseUrl) {
+      console.error('SUPABASE_URL environment variable is not set')
+      const errorResponse: ErrorResponse = {
+        success: false,
+        error: 'SUPABASE_URL environment variable is not configured',
+        details: 'Please set SUPABASE_URL in your Supabase Edge Functions settings'
+      }
+      
+      return new Response(
+        JSON.stringify(errorResponse),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
+    if (!supabaseServiceKey) {
+      console.error('SUPABASE_SERVICE_ROLE_KEY environment variable is not set')
+      const errorResponse: ErrorResponse = {
+        success: false,
+        error: 'SUPABASE_SERVICE_ROLE_KEY environment variable is not configured',
+        details: 'Please set SUPABASE_SERVICE_ROLE_KEY in your Supabase Edge Functions settings'
+      }
+      
+      return new Response(
+        JSON.stringify(errorResponse),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
     // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     const url = new URL(req.url)
