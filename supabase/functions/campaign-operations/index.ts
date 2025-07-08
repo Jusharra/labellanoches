@@ -257,7 +257,8 @@ Deno.serve(async (req) => {
         created_by: null,
         campaign_type: campaignData.campaignType || 'Regular Campaign',
         media_url: campaignData.mediaUrl && campaignData.mediaUrl.trim() !== '' ? campaignData.mediaUrl : null,
-        target_contact_lists: campaignData.selectedLists || []
+        target_contact_lists: campaignData.selectedLists || [],
+        webhook_url: business.webhook_url || null
       }
 
       const { data: newCampaign, error } = await supabase
