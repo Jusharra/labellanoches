@@ -60,64 +60,72 @@ const Campaigns = () => {
 
   // Fetch campaigns from Supabase Edge Function
   const fetchCampaigns = async () => {
+    console.log('⏳ Starting campaign fetch...');
     try {
       setLoading(true);
+      console.log('📡 Invoking campaign-operations function...');
       
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/campaign-operations/campaigns`, {
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json'
-        }
+      // Use supabase.functions.invoke instead of manual fetch
+      const { data, error } = await supabase.functions.invoke('campaign-operations', {
+        body: { action: 'get_campaigns' }
       });
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      console.log('📦 Function response:', { data, error });
+      
+      if (error) {
+        console.error('❌ Supabase function error:', error);
+        throw new Error(`Function error: ${error.message}`);
       }
       
-      const data = await response.json();
-      
       if (data?.success) {
+        console.log('✅ Successfully loaded campaigns:', data.data);
         setCampaigns(data.data || []);
       } else {
+        console.error('❌ API error:', data?.error);
         throw new Error(data?.error || 'Failed to fetch campaigns');
       }
     } catch (error) {
-      console.error('Error fetching campaigns:', error);
-      toast.error('Failed to load campaigns. Please try again.');
+      console.error('❌ Error fetching campaigns:', error);
+      toast.error(`Failed to load campaigns: ${error.message}`);
       setCampaigns([]);
     } finally {
+      console.log('🏁 Campaign fetch completed');
       setLoading(false);
     }
   };
 
   // Fetch contact lists
   const fetchContactLists = async () => {
+    console.log('⏳ Starting contact lists fetch...');
     try {
       setContactListsLoading(true);
+      console.log('📡 Invoking contact-list-operations function...');
       
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/contact-list-operations/lists`, {
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json'
-        }
+      // Use supabase.functions.invoke instead of manual fetch
+      const { data, error } = await supabase.functions.invoke('contact-list-operations', {
+        body: { action: 'get_lists' }
       });
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      console.log('📦 Contact lists response:', { data, error });
+      
+      if (error) {
+        console.error('❌ Supabase function error:', error);
+        throw new Error(`Function error: ${error.message}`);
       }
       
-      const data = await response.json();
-      
       if (data?.success) {
+        console.log('✅ Successfully loaded contact lists:', data.data);
         setContactLists(data.data || []);
       } else {
+        console.error('❌ API error:', data?.error);
         throw new Error(data?.error || 'Failed to fetch contact lists');
       }
     } catch (error) {
-      console.error('Error fetching contact lists:', error);
-      toast.error('Failed to load contact lists.');
+      console.error('❌ Error fetching contact lists:', error);
+      toast.error(`Failed to load contact lists: ${error.message}`);
       setContactLists([]);
     } finally {
+      console.log('🏁 Contact lists fetch completed');
       setContactListsLoading(false);
     }
   };
@@ -135,14 +143,11 @@ const Campaigns = () => {
       return;
     }
 
+    console.log('⏳ Creating campaign...');
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/campaign-operations/campaigns`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('campaign-operations', {
+        body: {
+          action: 'create_campaign',
           name: formData.name,
           selectedLists: formData.selectedLists,
           selectedTemplate: formData.selectedTemplate,
@@ -152,16 +157,18 @@ const Campaigns = () => {
           scheduleTime: formData.scheduleTime,
           mediaUrl: formData.mediaUrl,
           campaignType: formData.campaignType
-        })
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      console.log('📦 Create campaign response:', { data, error });
+
+      if (error) {
+        console.error('❌ Campaign creation error:', error);
+        throw new Error(`Function error: ${error.message}`);
       }
-
-      const data = await response.json();
-
+      
       if (data?.success) {
+        console.log('✅ Campaign created successfully:', data.data);
         toast.success('Campaign created successfully!');
         setShowCreateModal(false);
         setFormData({
@@ -177,11 +184,12 @@ const Campaigns = () => {
         });
         fetchCampaigns(); // Refresh campaigns
       } else {
+        console.error('❌ API error:', data?.error);
         throw new Error(data?.error || 'Failed to create campaign');
       }
     } catch (error) {
-      console.error('Error creating campaign:', error);
-      toast.error('Failed to create campaign. Please try again.');
+      console.error('❌ Error creating campaign:', error);
+      toast.error(`Failed to create campaign: ${error.message}`);
     }
   };
 
@@ -194,30 +202,33 @@ const Campaigns = () => {
       return;
     }
 
+    console.log('⏳ Deleting campaign:', campaignId);
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/campaign-operations/campaigns/${campaignId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json'
+      const { data, error } = await supabase.functions.invoke('campaign-operations', {
+        body: {
+          action: 'delete_campaign',
+          campaign_id: campaignId
         }
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      console.log('📦 Delete campaign response:', { data, error });
+
+      if (error) {
+        console.error('❌ Campaign deletion error:', error);
+        throw new Error(`Function error: ${error.message}`);
       }
-
-      const data = await response.json();
-
+      
       if (data?.success) {
+        console.log('✅ Campaign deleted successfully');
         toast.success('Campaign deleted successfully!');
         fetchCampaigns(); // Refresh campaigns
       } else {
+        console.error('❌ API error:', data?.error);
         throw new Error(data?.error || 'Failed to delete campaign');
       }
     } catch (error) {
-      console.error('Error deleting campaign:', error);
-      toast.error('Failed to delete campaign. Please try again.');
+      console.error('❌ Error deleting campaign:', error);
+      toast.error(`Failed to delete campaign: ${error.message}`);
     }
   };
 
@@ -230,33 +241,34 @@ const Campaigns = () => {
       return;
     }
 
+    console.log('⏳ Sending campaign:', campaignId);
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/campaign-operations/campaigns/${campaignId}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('campaign-operations', {
+        body: {
+          action: 'update_campaign',
+          campaign_id: campaignId,
           status: 'sending'
-        })
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      console.log('📦 Send campaign response:', { data, error });
+
+      if (error) {
+        console.error('❌ Campaign sending error:', error);
+        throw new Error(`Function error: ${error.message}`);
       }
-
-      const data = await response.json();
-
+      
       if (data?.success) {
+        console.log('✅ Campaign sent successfully');
         toast.success('Campaign is being sent!');
         fetchCampaigns(); // Refresh campaigns
       } else {
+        console.error('❌ API error:', data?.error);
         throw new Error(data?.error || 'Failed to send campaign');
       }
     } catch (error) {
-      console.error('Error sending campaign:', error);
-      toast.error('Failed to send campaign. Please try again.');
+      console.error('❌ Error sending campaign:', error);
+      toast.error(`Failed to send campaign: ${error.message}`);
     }
   };
 

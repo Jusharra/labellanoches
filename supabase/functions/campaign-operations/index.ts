@@ -71,8 +71,43 @@ Deno.serve(async (req) => {
 
     console.log(`${req.method} ${pathname}`)
 
+    // Handle function invocation with body parameters
+    let requestBody: any = null
+    if (req.method === 'POST') {
+      try {
+        requestBody = await req.json()
+        console.log('📦 Request body:', requestBody)
+      } catch (e) {
+        console.log('No request body or invalid JSON')
+      }
+    }
+
+    // Handle actions from function invoke
+    if (requestBody?.action) {
+      console.log('🎯 Handling action:', requestBody.action)
+      
+      switch (requestBody.action) {
+        case 'get_campaigns':
+          // Fall through to GET /campaigns handler
+          break
+        case 'create_campaign':
+          // Fall through to POST /campaigns handler  
+          break
+        case 'update_campaign':
+          // Fall through to PUT /campaigns handler
+          break
+        case 'delete_campaign':
+          // Fall through to DELETE /campaigns handler
+          break
+        default:
+          console.log('❌ Unknown action:', requestBody.action)
+          break
+      }
+    }
+
     // GET /campaign-operations/campaigns - Get all campaigns
-    if (req.method === 'GET' && pathname.endsWith('/campaigns')) {
+    if ((req.method === 'GET' && pathname.endsWith('/campaigns')) || requestBody?.action === 'get_campaigns') {
+      console.log('🔍 Fetching campaigns...')
       const businessId = searchParams.get('business_id')
 
       let query = supabase

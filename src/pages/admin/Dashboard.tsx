@@ -16,32 +16,36 @@ const Dashboard = () => {
   // Fetch campaigns from Supabase Edge Function
   useEffect(() => {
     const fetchCampaigns = async () => {
+      console.log('⏳ Dashboard: Starting campaign fetch...');
       try {
         setLoading(true);
+        console.log('📡 Dashboard: Invoking campaign-operations function...');
         
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/campaign-operations/campaigns`, {
-          headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json'
-          }
+        // Use supabase.functions.invoke instead of manual fetch
+        const { data, error } = await supabase.functions.invoke('campaign-operations', {
+          body: { action: 'get_campaigns' }
         });
         
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+        console.log('📦 Dashboard: Function response:', { data, error });
+        
+        if (error) {
+          console.error('❌ Dashboard: Supabase function error:', error);
+          throw new Error(`Function error: ${error.message}`);
         }
         
-        const data = await response.json();
-        
         if (data?.success) {
+          console.log('✅ Dashboard: Successfully loaded campaigns:', data.data);
           setCampaigns(data.data || []);
         } else {
+          console.error('❌ Dashboard: API error:', data?.error);
           throw new Error(data?.error || 'Failed to fetch campaigns');
         }
       } catch (error) {
-        console.error('Error fetching campaigns:', error);
-        toast.error('Failed to load campaigns');
+        console.error('❌ Dashboard: Error fetching campaigns:', error);
+        toast.error(`Failed to load campaigns: ${error.message}`);
         setCampaigns([]);
       } finally {
+        console.log('🏁 Dashboard: Campaign fetch completed');
         setLoading(false);
       }
     };
