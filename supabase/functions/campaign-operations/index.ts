@@ -609,10 +609,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     const url = new URL(req.url)
-    const pathname = url.pathname
     const searchParams = url.searchParams
-
-    console.log(`${req.method} ${pathname}`)
 
     // Handle function invocation with body parameters
     let requestBody: any = null
@@ -625,7 +622,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Handle actions from function invoke - THIS IS THE KEY FIX
+    // Handle actions from function invoke
     if (requestBody?.action) {
       console.log('🎯 Handling action:', requestBody.action)
       
@@ -659,90 +656,16 @@ Deno.serve(async (req) => {
       }
     }
 
-    // URL-based routing for direct HTTP requests
-    // GET /campaign-operations/campaigns - Get all campaigns
-    if (req.method === 'GET' && pathname.endsWith('/campaigns')) {
-      return await handleGetCampaigns(supabase, searchParams)
-    }
-
-    // POST /campaign-operations/campaigns - Create new campaign
-    if (req.method === 'POST' && pathname.endsWith('/campaigns')) {
-      let campaignData
-      
-      try {
-        const requestText = await req.text()
-        if (!requestText || requestText.trim() === '') {
-          throw new Error('Request body is empty')
-        }
-        campaignData = JSON.parse(requestText)
-      } catch (parseError) {
-        console.error('Error parsing JSON:', parseError)
-        const errorResponse: ErrorResponse = {
-          success: false,
-          error: 'Invalid JSON in request body',
-          details: parseError.message
-        }
-        
-        return new Response(
-          JSON.stringify(errorResponse),
-          { 
-            status: 400, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        )
-      }
-
-      return await handleCreateCampaign(supabase, campaignData)
-    }
-
-    // PUT /campaign-operations/campaigns/:id - Update campaign
-    if (req.method === 'PUT' && pathname.includes('/campaigns/')) {
-      const campaignId = pathname.split('/').pop()
-      
-      let updateData
-      
-      try {
-        const requestText = await req.text()
-        if (!requestText || requestText.trim() === '') {
-          throw new Error('Request body is empty')
-        }
-        updateData = JSON.parse(requestText)
-      } catch (parseError) {
-        console.error('Error parsing JSON:', parseError)
-        const errorResponse: ErrorResponse = {
-          success: false,
-          error: 'Invalid JSON in request body',
-          details: parseError.message
-        }
-        
-        return new Response(
-          JSON.stringify(errorResponse),
-          { 
-            status: 400, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        )
-      }
-
-      return await handleUpdateCampaign(supabase, campaignId!, updateData)
-    }
-
-    // DELETE /campaign-operations/campaigns/:id - Delete campaign
-    if (req.method === 'DELETE' && pathname.includes('/campaigns/')) {
-      const campaignId = pathname.split('/').pop()
-      return await handleDeleteCampaign(supabase, campaignId!)
-    }
-
-    // If no route matches
+    // If no action matches
     const errorResponse: ErrorResponse = {
       success: false,
-      error: `Endpoint not found: ${req.method} ${pathname}`
+      error: 'No action specified'
     }
 
     return new Response(
       JSON.stringify(errorResponse),
       { 
-        status: 404, 
+        status: 400, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     )

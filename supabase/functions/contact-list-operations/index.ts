@@ -30,10 +30,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     const url = new URL(req.url)
-    const pathname = url.pathname
     const searchParams = url.searchParams
-
-    console.log(`${req.method} ${pathname}`)
 
     // Handle function invocation with body parameters
     let requestBody: any = null
@@ -83,62 +80,16 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Handle direct HTTP requests (for backwards compatibility)
-    
-    // GET /contact-list-operations/lists - Get all contact lists
-    if (req.method === 'GET' && pathname.endsWith('/lists')) {
-      return await handleGetLists(supabase, searchParams)
-    }
-
-    // POST /contact-list-operations/lists - Create new contact list
-    if (req.method === 'POST' && pathname.endsWith('/lists')) {
-      return await handleCreateList(supabase, requestBody)
-    }
-
-    // PUT /contact-list-operations/lists/:id - Update contact list
-    if (req.method === 'PUT' && pathname.includes('/lists/') && !pathname.includes('/update-membership/')) {
-      const listId = pathname.split('/').pop()
-      return await handleUpdateList(supabase, { ...requestBody, list_id: listId })
-    }
-
-    // DELETE /contact-list-operations/lists/:id - Delete contact list
-    if (req.method === 'DELETE' && pathname.includes('/lists/')) {
-      const listId = pathname.split('/').pop()
-      return await handleDeleteList(supabase, { list_id: listId })
-    }
-
-    // GET /contact-list-operations/members/:listId - Get members of a specific list
-    if (req.method === 'GET' && pathname.includes('/members/')) {
-      const listId = pathname.split('/').pop()
-      return await handleGetMembers(supabase, { list_id: listId })
-    }
-
-    // POST /contact-list-operations/add-members - Add contacts to lists
-    if (req.method === 'POST' && pathname.endsWith('/add-members')) {
-      return await handleAddMembers(supabase, requestBody)
-    }
-
-    // DELETE /contact-list-operations/remove-members - Remove contacts from lists
-    if (req.method === 'DELETE' && pathname.endsWith('/remove-members')) {
-      return await handleRemoveMembers(supabase, requestBody)
-    }
-
-    // PUT /contact-list-operations/update-membership/:listId - Update membership for entire list
-    if (req.method === 'PUT' && pathname.includes('/update-membership/')) {
-      const listId = pathname.split('/').pop()
-      return await handleUpdateMembership(supabase, { ...requestBody, list_id: listId })
-    }
-
-    // If no route matches
+    // If no action matches
     const errorResponse: ErrorResponse = {
       success: false,
-      error: `Endpoint not found: ${req.method} ${pathname}`
+      error: 'No action specified'
     }
 
     return new Response(
       JSON.stringify(errorResponse),
       { 
-        status: 404, 
+        status: 400, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     )
