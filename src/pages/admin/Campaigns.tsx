@@ -1,6 +1,3 @@
-Here's the fixed version with all missing closing brackets added:
-
-```typescript
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Send, Trash2, BarChart3, Calendar, MessageSquare, RefreshCw, Upload, Image } from 'lucide-react';
 import { useAuth } from '@clerk/clerk-react';
@@ -693,3 +690,423 @@ const Campaigns = () => {
                                 });
                               } else {
                                 setNewCampaign({
+                                  ...newCampaign,
+                                  selectedLists: newCampaign.selectedLists.filter(id => id !== list.id)
+                                });
+                              }
+                            }}
+                            className="mr-3 rounded border-gray-300 text-primary focus:ring-primary"
+                          />
+                          <div>
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">
+                              {list.list_name}
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              {list.description || 'No description'}
+                            </div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="messageContent" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Message Content *
+                    </label>
+                    <div className="flex space-x-2 mb-2">
+                      <button
+                        onClick={() => {
+                          if (templates.length > 0) {
+                            const randomTemplate = templates[Math.floor(Math.random() * templates.length)];
+                            handleSelectTemplate(randomTemplate.content, false);
+                          }
+                        }}
+                        className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                      >
+                        Use Template
+                      </button>
+                      <button
+                        onClick={() => {
+                          fetchMediaAssets();
+                          setShowMediaLibrary(true);
+                        }}
+                        className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                      >
+                        <Image className="h-3 w-3 inline mr-1" />
+                        Add Media
+                      </button>
+                    </div>
+                    <textarea
+                      id="messageContent"
+                      value={newCampaign.messageContent}
+                      onChange={(e) => setNewCampaign({ ...newCampaign, messageContent: e.target.value })}
+                      rows={4}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                      placeholder="Enter your campaign message..."
+                    />
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {newCampaign.messageContent.length}/160 characters
+                    </div>
+                  </div>
+
+                  {newCampaign.mediaUrl && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Media Preview
+                      </label>
+                      <div className="relative">
+                        <img 
+                          src={newCampaign.mediaUrl} 
+                          alt="Media preview" 
+                          className="w-full max-w-xs h-32 object-cover rounded-lg"
+                        />
+                        <button
+                          onClick={() => setNewCampaign({ ...newCampaign, mediaUrl: '' })}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="scheduledDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Schedule Date (Optional)
+                      </label>
+                      <input
+                        type="date"
+                        id="scheduledDate"
+                        value={newCampaign.scheduledDate}
+                        onChange={(e) => setNewCampaign({ ...newCampaign, scheduledDate: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="scheduleTime" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Schedule Time (Optional)
+                      </label>
+                      <input
+                        type="time"
+                        id="scheduleTime"
+                        value={newCampaign.scheduleTime}
+                        onChange={(e) => setNewCampaign({ ...newCampaign, scheduleTime: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  onClick={handleCreateCampaign}
+                  disabled={!newCampaign.name.trim() || !newCampaign.messageContent.trim()}
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary text-base font-medium text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Create Campaign
+                </button>
+                <button
+                  onClick={() => setShowCreateModal(false)}
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Campaign Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+
+            <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+              <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                  Edit Campaign
+                </h3>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="editCampaignName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Campaign Name *
+                    </label>
+                    <input
+                      type="text"
+                      id="editCampaignName"
+                      value={editCampaign.name}
+                      onChange={(e) => setEditCampaign({ ...editCampaign, name: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                      placeholder="e.g., Weekend Special Promotion"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="editChannel" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Channel *
+                      </label>
+                      <select
+                        id="editChannel"
+                        value={editCampaign.channel}
+                        onChange={(e) => setEditCampaign({ ...editCampaign, channel: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                      >
+                        <option value="sms">SMS</option>
+                        <option value="whatsapp">WhatsApp</option>
+                        <option value="both">Both</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label htmlFor="editCampaignType" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Campaign Type
+                      </label>
+                      <select
+                        id="editCampaignType"
+                        value={editCampaign.campaignType}
+                        onChange={(e) => setEditCampaign({ ...editCampaign, campaignType: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                      >
+                        <option value="Regular Campaign">Regular Campaign</option>
+                        <option value="Promotional">Promotional</option>
+                        <option value="Announcement">Announcement</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="editContactLists" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Contact Lists
+                    </label>
+                    <div className="max-h-32 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-lg p-2">
+                      {contactLists.map((list) => (
+                        <label key={list.id} className="flex items-center p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded">
+                          <input
+                            type="checkbox"
+                            checked={editCampaign.selectedLists.includes(list.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setEditCampaign({
+                                  ...editCampaign,
+                                  selectedLists: [...editCampaign.selectedLists, list.id]
+                                });
+                              } else {
+                                setEditCampaign({
+                                  ...editCampaign,
+                                  selectedLists: editCampaign.selectedLists.filter(id => id !== list.id)
+                                });
+                              }
+                            }}
+                            className="mr-3 rounded border-gray-300 text-primary focus:ring-primary"
+                          />
+                          <div>
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">
+                              {list.list_name}
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              {list.description || 'No description'}
+                            </div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="editMessageContent" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Message Content *
+                    </label>
+                    <div className="flex space-x-2 mb-2">
+                      <button
+                        onClick={() => {
+                          if (templates.length > 0) {
+                            const randomTemplate = templates[Math.floor(Math.random() * templates.length)];
+                            handleSelectTemplate(randomTemplate.content, true);
+                          }
+                        }}
+                        className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                      >
+                        Use Template
+                      </button>
+                      <button
+                        onClick={() => {
+                          fetchMediaAssets();
+                          setShowMediaLibrary(true);
+                        }}
+                        className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                      >
+                        <Image className="h-3 w-3 inline mr-1" />
+                        Add Media
+                      </button>
+                    </div>
+                    <textarea
+                      id="editMessageContent"
+                      value={editCampaign.messageContent}
+                      onChange={(e) => setEditCampaign({ ...editCampaign, messageContent: e.target.value })}
+                      rows={4}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                      placeholder="Enter your campaign message..."
+                    />
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {editCampaign.messageContent.length}/160 characters
+                    </div>
+                  </div>
+
+                  {editCampaign.mediaUrl && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Media Preview
+                      </label>
+                      <div className="relative">
+                        <img 
+                          src={editCampaign.mediaUrl} 
+                          alt="Media preview" 
+                          className="w-full max-w-xs h-32 object-cover rounded-lg"
+                        />
+                        <button
+                          onClick={() => setEditCampaign({ ...editCampaign, mediaUrl: '' })}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="editScheduledDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Schedule Date (Optional)
+                      </label>
+                      <input
+                        type="date"
+                        id="editScheduledDate"
+                        value={editCampaign.scheduledDate}
+                        onChange={(e) => setEditCampaign({ ...editCampaign, scheduledDate: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="editScheduleTime" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Schedule Time (Optional)
+                      </label>
+                      <input
+                        type="time"
+                        id="editScheduleTime"
+                        value={editCampaign.scheduleTime}
+                        onChange={(e) => setEditCampaign({ ...editCampaign, scheduleTime: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  onClick={handleUpdateCampaign}
+                  disabled={!editCampaign.name.trim() || !editCampaign.messageContent.trim()}
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary text-base font-medium text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Update Campaign
+                </button>
+                <button
+                  onClick={() => setShowEditModal(false)}
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Media Library Modal */}
+      {showMediaLibrary && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+
+            <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+              <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                  Select Media Asset
+                </h3>
+                
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Upload New Image
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleFileUpload(e, showEditModal)}
+                    className="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {mediaAssets.map((asset) => (
+                    <div
+                      key={asset.id}
+                      className="cursor-pointer border-2 border-transparent hover:border-primary rounded-lg overflow-hidden transition-colors"
+                      onClick={() => handleSelectMediaAsset(asset.access_link, showEditModal)}
+                    >
+                      <img
+                        src={asset.access_link}
+                        alt={asset.title}
+                        className="w-full h-32 object-cover"
+                      />
+                      <div className="p-2">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                          {asset.title}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {asset.media_type}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  onClick={() => setShowMediaLibrary(false)}
+                  className="w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:w-auto sm:text-sm"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Campaign Analytics Modal */}
+      {showAnalyticsModal && selectedCampaignForAnalytics && (
+        <CampaignAnalyticsModal
+          campaign={selectedCampaignForAnalytics}
+          isOpen={showAnalyticsModal}
+          onClose={handleCloseAnalyticsModal}
+        />
+      )}
+    </div>
+  );
+};
+
+export default Campaigns;
