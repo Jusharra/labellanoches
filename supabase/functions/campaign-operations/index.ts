@@ -317,6 +317,11 @@ Deno.serve(async (req) => {
       // Determine status based on schedule
       const status = scheduledTime ? 'scheduled' : 'draft'
 
+      // Clean UUIDs to remove any extra quotes that might be wrapped around them
+      const cleanedLists = (campaignData.selectedLists || []).map(id => 
+        typeof id === 'string' ? id.replace(/"/g, '') : id
+      );
+
       const newCampaignData = {
         business_id: business.id,
         title: campaignData.name,
@@ -328,7 +333,7 @@ Deno.serve(async (req) => {
         created_by: user.id, // Use the authenticated user's ID
         campaign_type: campaignData.campaignType || 'Regular Campaign',
         media_url: campaignData.mediaUrl && campaignData.mediaUrl.trim() !== '' ? campaignData.mediaUrl : null,
-        target_contact_lists: campaignData.selectedLists || [],
+        target_contact_lists: cleanedLists,
         webhook_url: business.webhook_url || null
       }
 
