@@ -1,5 +1,4 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { verify } from 'npm:@clerk/jwt@1'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
