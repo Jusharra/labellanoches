@@ -1,13 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Search, Upload, Download, Plus, Edit, Trash2, Users, Settings } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
-
-// Initialize Supabase client
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+import toast from 'react-hot-toast';
+import { useSupabase } from '../../context/SupabaseContext';
 
 interface Contact {
   id: string;
@@ -24,6 +19,7 @@ interface Contact {
 }
 
 const Contacts = () => {
+  const { supabase, isLoading: supabaseLoading, isAuthenticated } = useSupabase();
   const location = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
@@ -73,11 +69,18 @@ const Contacts = () => {
 
   // Fetch contacts and contact lists on component mount
   useEffect(() => {
-    fetchContacts();
-    fetchContactLists();
-  }, []);
+    if (supabase && isAuthenticated && !supabaseLoading) {
+      fetchContacts();
+      fetchContactLists();
+    }
+  }, [supabase, isAuthenticated, supabaseLoading]);
 
   const fetchContacts = async () => {
+    if (!supabase || !isAuthenticated) {
+      console.warn('⚠️ Supabase not initialized or user not authenticated');
+      return;
+    }
+
     try {
       setLoading(true);
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/contacts-operations/contacts`, {
@@ -107,6 +110,11 @@ const Contacts = () => {
   };
 
   const fetchContactLists = async () => {
+    if (!supabase || !isAuthenticated) {
+      console.warn('⚠️ Supabase not initialized or user not authenticated');
+      return;
+    }
+
     try {
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/contacts-operations/lists`, {
         headers: {
@@ -304,6 +312,11 @@ const Contacts = () => {
   };
 
   const handleAddNewContact = async () => {
+    if (!supabase || !isAuthenticated) {
+      toast.error('Authentication required to create contacts');
+      return;
+    }
+
     if (newContactData.name.trim() && newContactData.phoneNumber.trim()) {
       try {
         const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/contacts-operations/contacts`, {
@@ -370,6 +383,11 @@ const Contacts = () => {
   };
 
   const handleUpdateContact = async () => {
+    if (!supabase || !isAuthenticated) {
+      toast.error('Authentication required to update contacts');
+      return;
+    }
+
     if (editContactData.name.trim() && editContactData.phoneNumber.trim()) {
       try {
         const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/contacts-operations/contacts/${editContactData.id}`, {
@@ -411,6 +429,11 @@ const Contacts = () => {
   };
 
   const handleDeleteContact = async (contactId: string) => {
+    if (!supabase || !isAuthenticated) {
+      toast.error('Authentication required to delete contacts');
+      return;
+    }
+
     const contact = contacts.find(c => c.id === contactId);
     if (contact && window.confirm(`Are you sure you want to delete ${contact.name}? This action cannot be undone.`)) {
       try {
@@ -442,6 +465,11 @@ const Contacts = () => {
   };
 
   const handleBulkDelete = async () => {
+    if (!supabase || !isAuthenticated) {
+      toast.error('Authentication required to delete contacts');
+      return;
+    }
+
     if (selectedContacts.length === 0) return;
     
     const selectedContactNames = contacts
@@ -620,15 +648,52 @@ const Contacts = () => {
     }
   };
 
+  if (supabaseLoading || !supabase) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Contacts</h1>
+            <p className="mt-2 text-gray-600 dark:text-gray-300">Initializing authentication...</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Contacts</h1>
+            <p className="mt-2 text-gray-600 dark:text-gray-300">Please sign in to manage contacts</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+              Authentication Required
+            </h3>
+            <p className="text-gray-500 dark:text-gray-400">
+              Please sign in to access contact management.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Contacts</h1>
-            <p className="mt-2 text-gray-600 dark:text-gray-300">
-              Loading contacts...
-            </p>
+            <p className="mt-2 text-gray-600 dark:text-gray-300">Loading contacts...</p>
           </div>
         </div>
         <div className="flex items-center justify-center h-64">
