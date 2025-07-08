@@ -17,112 +17,6 @@ interface SuccessResponse<T = any> {
   data: T;
 }
 
-interface ClerkJWTPayload {
-  sub: string; // user ID
-  iss: string;
-  aud: string;
-  exp: number;
-  iat: number;
-  // Add other Clerk-specific claims as needed
-}
-
-/**
- * Helper function to create a Supabase client with service role
- */
-function getServiceSupabaseClient(supabaseUrl: string, serviceRoleKey: string) {
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  })
-}
-
-/**
- * Helper function to validate Clerk JWT and get user info
- */
-async function validateClerkAuth(req: Request, supabaseUrl: string, serviceRoleKey: string) {
-  const authHeader = req.headers.get('Authorization')
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return {
-      error: {
-        success: false,
-        error: 'Authentication required. Please sign in.',
-        status: 401
-      }
-    }
-  }
-
-  const token = authHeader.replace('Bearer ', '')
-  
-  try {
-    // For now, we'll extract the user ID from the token without verification
-    // In production, you should verify the JWT signature with Clerk's public key
-    const payload = JSON.parse(atob(token.split('.')[1])) as ClerkJWTPayload
-    
-    // Check if token has expired
-    const currentTime = Math.floor(Date.now() / 1000)
-    if (payload.exp && currentTime > payload.exp) {
-      return {
-        error: {
-          success: false,
-          error: 'Authentication token has expired. Please sign in again.',
-          status: 401
-        }
-      }
-    }
-    
-    const userId = payload.sub
-
-    if (!userId) {
-      return {
-        error: {
-          success: false,
-          error: 'Invalid token: missing user ID',
-          status: 401
-        }
-      }
-    }
-
-    // Create service role client for database operations
-    const serviceSupabase = getServiceSupabaseClient(supabaseUrl, serviceRoleKey)
-    
-    // Check user permissions using service role client
-    const { data: userProfile, error: profileError } = await serviceSupabase
-      .from('user_profiles')
-      .select('role, business_id')
-      .eq('id', userId)
-      .single()
-
-    if (profileError || !userProfile) {
-      console.error('Error fetching user profile:', profileError)
-      return {
-        error: {
-          success: false,
-          error: 'Unable to verify user permissions.',
-          status: 403
-        }
-      }
-    }
-
-    return {
-      userId,
-      userProfile,
-      serviceSupabase,
-      authHeader
-    }
-  } catch (error) {
-    console.error('Error validating Clerk token:', error)
-    return {
-      error: {
-        success: false,
-        error: 'Invalid authentication token. Please sign in again.',
-        status: 401
-      }
-    }
-  }
-}
-
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -130,9 +24,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Initialize Supabase clients
+    // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     const url = new URL(req.url)
     const pathname = url.pathname
@@ -142,31 +37,13 @@ Deno.serve(async (req) => {
 
     // GET /campaign-operations/campaigns - Get all campaigns
     if (req.method === 'GET' && pathname.endsWith('/campaigns')) {
-      const authResult = await validateClerkAuth(req, supabaseUrl, supabaseServiceKey)
-      
-      if (authResult.error) {
-        return new Response(
-          JSON.stringify(authResult.error),
-          { 
-            status: authResult.error.status, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        )
-      }
-
-      const { serviceSupabase, userProfile } = authResult
-
-      // Use service role client with RLS bypass for admin operations
       const businessId = searchParams.get('business_id')
 
-      let query = serviceSupabase
+      let query = supabase
         .from('campaigns')
         .select('*')
 
-      // If user is not admin, filter by their business
-      if (userProfile.role !== 'admin' && userProfile.business_id) {
-        query = query.eq('business_id', userProfile.business_id)
-      } else if (businessId) {
+      if (businessId) {
         query = query.eq('business_id', businessId)
       }
 
@@ -203,7 +80,7 @@ Deno.serve(async (req) => {
       // Fetch contact list names for all unique list IDs
       let listNamesMap: Map<string, string> = new Map();
       if (allListIds.size > 0) {
-        const { data: contactLists, error: listsError } = await serviceSupabase
+        const { data: contactLists, error: listsError } = await supabase
           .from('contact_lists')
           .select('id, list_name')
           .in('id', Array.from(allListIds));
@@ -221,7 +98,7 @@ Deno.serve(async (req) => {
       // Fetch actual sent counts from campaign_logs table
       let sentCountsMap: Map<string, number> = new Map();
       if (campaignIds.length > 0) {
-        const { data: campaignLogs, error: logsError } = await serviceSupabase
+        const { data: campaignLogs, error: logsError } = await supabase
           .from('campaign_logs')
           .select('campaign_id')
           .in('campaign_id', campaignIds)
@@ -312,36 +189,6 @@ Deno.serve(async (req) => {
 
     // POST /campaign-operations/campaigns - Create new campaign
     if (req.method === 'POST' && pathname.endsWith('/campaigns')) {
-      const authResult = await validateClerkAuth(req, supabaseUrl, supabaseServiceKey)
-      
-      if (authResult.error) {
-        return new Response(
-          JSON.stringify(authResult.error),
-          { 
-            status: authResult.error.status, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        )
-      }
-
-      const { userId, serviceSupabase, userProfile } = authResult
-
-      // Verify user has admin permissions
-      if (userProfile.role !== 'admin') {
-        const errorResponse: ErrorResponse = {
-          success: false,
-          error: 'Admin permissions required to create campaigns.'
-        }
-        
-        return new Response(
-          JSON.stringify(errorResponse),
-          { 
-            status: 403, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        )
-      }
-
       let campaignData
       
       try {
@@ -368,9 +215,9 @@ Deno.serve(async (req) => {
       }
 
       // Get the Bella Vista business ID
-      const { data: business, error: businessError } = await serviceSupabase
+      const { data: business, error: businessError } = await supabase
         .from('businesses')
-        .select('id, webhook_url, twilio_number')
+        .select('id, webhook_url')
         .eq('name', 'La Bella Noches')
         .single()
 
@@ -399,14 +246,6 @@ Deno.serve(async (req) => {
       // Determine status based on schedule
       const status = scheduledTime ? 'scheduled' : 'draft'
 
-      // Clean UUIDs to remove any extra quotes that might be wrapped around them
-      const cleanedLists = (campaignData.selectedLists || []).map(id => 
-        typeof id === 'string' ? id.replace(/"/g, '') : id
-      );
-
-      console.log('Creating campaign with user ID:', userId)
-      console.log('Business twilio_number:', business.twilio_number)
-
       const newCampaignData = {
         business_id: business.id,
         title: campaignData.name,
@@ -415,15 +254,14 @@ Deno.serve(async (req) => {
         channel: campaignData.channel,
         scheduled_time: scheduledTime,
         status: status,
-        created_by: userId,
+        created_by: null,
         campaign_type: campaignData.campaignType || 'Regular Campaign',
         media_url: campaignData.mediaUrl && campaignData.mediaUrl.trim() !== '' ? campaignData.mediaUrl : null,
-        target_contact_lists: cleanedLists,
-        webhook_url: business.webhook_url || null,
-        from_number: business.twilio_number || null
+        target_contact_lists: campaignData.selectedLists || [],
+        webhook_url: business.webhook_url || null
       }
 
-      const { data: newCampaign, error } = await serviceSupabase
+      const { data: newCampaign, error } = await supabase
         .from('campaigns')
         .insert(newCampaignData)
         .select()
@@ -461,7 +299,7 @@ Deno.serve(async (req) => {
 
       let listNamesMap: Map<string, string> = new Map();
       if (targetLists.length > 0) {
-        const { data: contactLists, error: listsError } = await serviceSupabase
+        const { data: contactLists, error: listsError } = await supabase
           .from('contact_lists')
           .select('id, list_name')
           .in('id', targetLists);
@@ -526,20 +364,6 @@ Deno.serve(async (req) => {
 
     // PUT /campaign-operations/campaigns/:id - Update campaign
     if (req.method === 'PUT' && pathname.includes('/campaigns/')) {
-      const authResult = await validateClerkAuth(req, supabaseUrl, supabaseServiceKey)
-      
-      if (authResult.error) {
-        return new Response(
-          JSON.stringify(authResult.error),
-          { 
-            status: authResult.error.status, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        )
-      }
-
-      const { serviceSupabase, userProfile } = authResult
-
       const campaignId = pathname.split('/').pop()
       
       let updateData
@@ -604,7 +428,8 @@ Deno.serve(async (req) => {
       }
 
       // Always ensure webhook_url is synced with business settings when updating
-      const { data: campaignWithBusiness, error: fetchError } = await serviceSupabase
+      // First, fetch the campaign's business_id and the business's current webhook_url
+      const { data: campaignWithBusiness, error: fetchError } = await supabase
         .from('campaigns')
         .select(`
           business_id,
@@ -616,6 +441,7 @@ Deno.serve(async (req) => {
       if (fetchError) {
         console.error('Error fetching campaign business info:', fetchError)
       } else if (campaignWithBusiness?.businesses?.webhook_url) {
+        // Sync the webhook URL from the business
         campaignUpdateData.webhook_url = campaignWithBusiness.businesses.webhook_url
       }
 
@@ -623,10 +449,11 @@ Deno.serve(async (req) => {
       if (updateData.scheduledDate && updateData.scheduleTime) {
         campaignUpdateData.scheduled_time = `${updateData.scheduledDate}T${updateData.scheduleTime}:00`
       } else if (updateData.scheduledDate === '' || updateData.scheduleTime === '') {
+        // Clear scheduled time if either field is empty
         campaignUpdateData.scheduled_time = null
       }
 
-      const { data: updatedCampaign, error } = await serviceSupabase
+      const { data: updatedCampaign, error } = await supabase
         .from('campaigns')
         .update(campaignUpdateData)
         .eq('id', campaignId)
@@ -665,7 +492,7 @@ Deno.serve(async (req) => {
 
       let listNamesMap: Map<string, string> = new Map();
       if (targetLists.length > 0) {
-        const { data: contactLists, error: listsError } = await serviceSupabase
+        const { data: contactLists, error: listsError } = await supabase
           .from('contact_lists')
           .select('id, list_name')
           .in('id', targetLists);
@@ -697,8 +524,8 @@ Deno.serve(async (req) => {
         templateName: updatedCampaign.message_template || 'Custom Message',
         scheduledDate: updatedCampaign.scheduled_time ? 
           new Date(updatedCampaign.scheduled_time).toISOString().split('T')[0] : '',
-        sentCount: 0,
-        openRate: 'N/A',
+        sentCount: 0, // Will be calculated from campaign_logs
+        openRate: 'N/A', // Will be calculated from campaign_logs
         createdDate: new Date(updatedCampaign.created_at).toISOString().split('T')[0],
         campaignType: updatedCampaign.campaign_type,
         business: 'la-bella-noches',
@@ -728,23 +555,9 @@ Deno.serve(async (req) => {
 
     // DELETE /campaign-operations/campaigns/:id - Delete campaign
     if (req.method === 'DELETE' && pathname.includes('/campaigns/')) {
-      const authResult = await validateClerkAuth(req, supabaseUrl, supabaseServiceKey)
-      
-      if (authResult.error) {
-        return new Response(
-          JSON.stringify(authResult.error),
-          { 
-            status: authResult.error.status, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        )
-      }
-
-      const { serviceSupabase, userProfile } = authResult
-
       const campaignId = pathname.split('/').pop()
 
-      const { error } = await serviceSupabase
+      const { error } = await supabase
         .from('campaigns')
         .delete()
         .eq('id', campaignId)

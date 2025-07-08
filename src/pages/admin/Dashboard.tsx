@@ -1,7 +1,6 @@
 import React from 'react';
 import { Users, MessageSquare, Send, TrendingUp } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
-import { useAuth } from '@clerk/clerk-react';
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -12,7 +11,6 @@ const supabase = createClient(
 const Dashboard = () => {
   const [campaigns, setCampaigns] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const { getToken } = useAuth();
   
   // Fetch campaigns on component mount
   React.useEffect(() => {
@@ -21,15 +19,9 @@ const Dashboard = () => {
 
   const fetchCampaigns = async () => {
     try {
-      const token = await getToken();
-      
-      if (!token) {
-        throw new Error('No authentication token available');
-      }
-      
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/campaign-operations/campaigns`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json'
         }
       });
