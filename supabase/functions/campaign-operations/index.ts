@@ -210,7 +210,7 @@ Deno.serve(async (req) => {
       const userToken = authHeader.replace('Bearer ', '')
       
       // Create a new Supabase client using the user's token for RLS compliance
-      const userSupabase = createClient(supabaseUrl, import.meta.env.SUPABASE_ANON_KEY || Deno.env.get('SUPABASE_ANON_KEY')!, {
+      const userSupabase = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
         global: {
           headers: {
             Authorization: authHeader
