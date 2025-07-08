@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ClerkProvider } from '@clerk/clerk-react';
 import { Toaster } from 'react-hot-toast';
+import { SupabaseProvider } from './context/SupabaseContext';
 import App from './App.tsx';
 import './index.css';
 
@@ -18,7 +19,9 @@ createRoot(document.getElementById('root')!).render(
       signInUrl="/sign-in"
       signUpUrl="/sign-up"
     >
-      <App />
+      <SupabaseProvider>
+        <App />
+      </SupabaseProvider>
       <Toaster
         position="top-right"
         toastOptions={{

@@ -175,15 +175,32 @@ async function handleCreateCampaign(supabase: any, campaignData: any, req: Reque
   console.log('📝 Creating campaign with data:', campaignData)
 
   // Get the authenticated user from the request
+  const authHeader = req.headers.get('Authorization')
+  if (!authHeader) {
+    console.error('❌ No authorization header found')
+    const errorResponse: ErrorResponse = {
+      success: false,
+      error: 'Authorization header required'
+    }
+    
+    return new Response(
+      JSON.stringify(errorResponse),
+      { 
+        status: 401, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    )
+  }
+
   const { data: { user }, error: authError } = await supabase.auth.getUser(
-    req.headers.get('Authorization')?.replace('Bearer ', '')
+    authHeader.replace('Bearer ', '')
   )
 
   if (authError || !user) {
     console.error('Authentication error:', authError)
     const errorResponse: ErrorResponse = {
       success: false,
-      error: 'Authentication required to create campaigns',
+      error: `Authentication failed: ${authError?.message || 'User not found'}`,
       details: authError
     }
     
@@ -196,7 +213,7 @@ async function handleCreateCampaign(supabase: any, campaignData: any, req: Reque
     )
   }
 
-  console.log('🔐 Authenticated user:', user.id)
+  console.log('🔐 Authenticated user:', user.id, 'Email:', user.email)
 
   // Get the Bella Vista business ID
   const { data: business, error: businessError } = await supabase

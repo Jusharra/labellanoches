@@ -1,15 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Send, Calendar, Eye, RefreshCw, MessageSquare, Phone } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
 import toast from 'react-hot-toast';
 import { useTemplates } from '../../components/AdminLayout';
 import CampaignAnalyticsModal from '../../components/CampaignAnalyticsModal';
-
-// Initialize Supabase client
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+import { useSupabase } from '../../context/SupabaseContext';
 
 interface Campaign {
   id: string;
@@ -34,6 +28,7 @@ interface Campaign {
 
 const Campaigns = () => {
   const { templates } = useTemplates();
+  const { supabase, isLoading: supabaseLoading, isAuthenticated } = useSupabase();
   
   // State management
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -61,6 +56,11 @@ const Campaigns = () => {
 
   // Fetch campaigns from Supabase Edge Function
   const fetchCampaigns = async () => {
+    if (!supabase || !isAuthenticated) {
+      console.warn('⚠️ Supabase not initialized or user not authenticated');
+      return;
+    }
+
     console.log('⏳ Starting campaign fetch...');
     try {
       setLoading(true);
@@ -97,6 +97,11 @@ const Campaigns = () => {
 
   // Fetch contact lists
   const fetchContactLists = async () => {
+    if (!supabase || !isAuthenticated) {
+      console.warn('⚠️ Supabase not initialized or user not authenticated');
+      return;
+    }
+
     console.log('⏳ Starting contact lists fetch...');
     try {
       setContactListsLoading(true);
@@ -133,9 +138,11 @@ const Campaigns = () => {
 
   // Load data on component mount
   useEffect(() => {
-    fetchCampaigns();
-    fetchContactLists();
-  }, []);
+    if (supabase && isAuthenticated && !supabaseLoading) {
+      fetchCampaigns();
+      fetchContactLists();
+    }
+  }, [supabase, isAuthenticated, supabaseLoading]);
 
   // Handle template selection
   const handleTemplateSelect = (template: any) => {
@@ -159,6 +166,11 @@ const Campaigns = () => {
 
   // Handle campaign creation
   const handleCreateCampaign = async () => {
+    if (!supabase || !isAuthenticated) {
+      toast.error('Authentication required to create campaigns');
+      return;
+    }
+
     if (!formData.name.trim() || !formData.messageContent.trim()) {
       toast.error('Please fill in all required fields');
       return;
@@ -218,6 +230,11 @@ const Campaigns = () => {
 
   // Handle campaign deletion
   const handleDeleteCampaign = async (campaignId: string) => {
+    if (!supabase || !isAuthenticated) {
+      toast.error('Authentication required to delete campaigns');
+      return;
+    }
+
     const campaign = campaigns.find(c => c.id === campaignId);
     if (!campaign) return;
 
@@ -257,6 +274,11 @@ const Campaigns = () => {
 
   // Handle campaign sending
   const handleSendCampaign = async (campaignId: string) => {
+    if (!supabase || !isAuthenticated) {
+      toast.error('Authentication required to send campaigns');
+      return;
+    }
+
     const campaign = campaigns.find(c => c.id === campaignId);
     if (!campaign) return;
 
@@ -325,6 +347,45 @@ const Campaigns = () => {
       <MessageSquare className="h-4 w-4 text-green-600" />
     );
   };
+
+  if (supabaseLoading || !supabase) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Campaigns</h1>
+            <p className="mt-2 text-gray-600 dark:text-gray-300">Initializing authentication...</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Campaigns</h1>
+            <p className="mt-2 text-gray-600 dark:text-gray-300">Please sign in to manage campaigns</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+              Authentication Required
+            </h3>
+            <p className="text-gray-500 dark:text-gray-400">
+              Please sign in to access campaign management.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

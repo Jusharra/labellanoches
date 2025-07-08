@@ -1,21 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { Users, MessageSquare, Send, TrendingUp } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
 import toast from 'react-hot-toast';
-
-// Initialize Supabase client
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+import { useSupabase } from '../../context/SupabaseContext';
 
 const Dashboard = () => {
+  const { supabase, isLoading: supabaseLoading, isAuthenticated } = useSupabase();
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Fetch campaigns from Supabase Edge Function
   useEffect(() => {
     const fetchCampaigns = async () => {
+      if (!supabase || !isAuthenticated) {
+        console.warn('⚠️ Dashboard: Supabase not initialized or user not authenticated');
+        setLoading(false);
+        return;
+      }
+
       console.log('⏳ Dashboard: Starting campaign fetch...');
       try {
         setLoading(true);
@@ -50,8 +51,12 @@ const Dashboard = () => {
       }
     };
 
-    fetchCampaigns();
-  }, []);
+    if (supabase && isAuthenticated && !supabaseLoading) {
+      fetchCampaigns();
+    } else {
+      setLoading(false);
+    }
+  }, [supabase, isAuthenticated, supabaseLoading]);
   
   const stats = [
     {
@@ -95,6 +100,45 @@ const Dashboard = () => {
       recipients: campaign.sentCount || 0,
       date: campaign.scheduledDate || campaign.createdDate || ''
     }));
+
+  if (supabaseLoading || !supabase) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-300">
+            Initializing authentication...
+          </p>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-300">
+            Please sign in to access the dashboard.
+          </p>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+              Authentication Required
+            </h3>
+            <p className="text-gray-500 dark:text-gray-400">
+              Please sign in to access the admin dashboard.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
