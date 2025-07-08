@@ -171,8 +171,32 @@ async function handleGetCampaigns(supabase: any, searchParams: URLSearchParams) 
 }
 
 // Handler function for creating campaigns
-async function handleCreateCampaign(supabase: any, campaignData: any) {
+async function handleCreateCampaign(supabase: any, campaignData: any, req: Request) {
   console.log('📝 Creating campaign with data:', campaignData)
+
+  // Get the authenticated user from the request
+  const { data: { user }, error: authError } = await supabase.auth.getUser(
+    req.headers.get('Authorization')?.replace('Bearer ', '')
+  )
+
+  if (authError || !user) {
+    console.error('Authentication error:', authError)
+    const errorResponse: ErrorResponse = {
+      success: false,
+      error: 'Authentication required to create campaigns',
+      details: authError
+    }
+    
+    return new Response(
+      JSON.stringify(errorResponse),
+      { 
+        status: 401, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    )
+  }
+
+  console.log('🔐 Authenticated user:', user.id)
 
   // Get the Bella Vista business ID
   const { data: business, error: businessError } = await supabase
@@ -249,7 +273,7 @@ async function handleCreateCampaign(supabase: any, campaignData: any) {
     channel: campaignData.channel,
     scheduled_time: scheduledTime,
     status: status,
-    created_by: '00000000-0000-0000-0000-000000000001', // System user ID for admin panel operations
+    created_by: user.id, // Use the authenticated user's ID
     campaign_type: campaignData.campaignType || 'Regular Campaign',
     media_url: campaignData.mediaUrl && campaignData.mediaUrl.trim() !== '' ? campaignData.mediaUrl : null,
     target_contact_lists: campaignData.selectedLists || [],
@@ -631,7 +655,7 @@ Deno.serve(async (req) => {
           return await handleGetCampaigns(supabase, searchParams)
         
         case 'create_campaign':
-          return await handleCreateCampaign(supabase, requestBody)
+          return await handleCreateCampaign(supabase, requestBody, req)
         
         case 'update_campaign':
           return await handleUpdateCampaign(supabase, requestBody.campaignId, requestBody)
