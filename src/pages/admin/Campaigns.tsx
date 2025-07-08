@@ -11,6 +11,12 @@ const supabase = createClient(
   import.meta.env.VITE_SUPABASE_ANON_KEY
 );
 
+// Helper function to get authenticated session token
+const getAuthToken = async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token;
+};
+
 interface Campaign {
   id: string;
   name: string;
@@ -88,9 +94,15 @@ const Campaigns = () => {
   const fetchCampaigns = async () => {
     try {
       setLoading(true);
+      const token = await getAuthToken();
+      if (!token) {
+        toast.error('Please sign in to view campaigns.');
+        return;
+      }
+
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/campaign-operations/campaigns`, {
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
@@ -117,9 +129,15 @@ const Campaigns = () => {
   const fetchContactLists = async () => {
     try {
       setLoadingLists(true);
+      const token = await getAuthToken();
+      if (!token) {
+        toast.error('Please sign in to view contact lists.');
+        return;
+      }
+
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/contact-list-operations/lists`, {
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
@@ -146,6 +164,12 @@ const Campaigns = () => {
   const handleCreateCampaign = async () => {
     if (newCampaign.name.trim() && newCampaign.messageContent.trim()) {
       try {
+        const token = await getAuthToken();
+        if (!token) {
+          toast.error('Please sign in to create campaigns.');
+          return;
+        }
+
         const payload = {
           name: newCampaign.name,
           messageContent: newCampaign.messageContent,
@@ -163,7 +187,7 @@ const Campaigns = () => {
         const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/campaign-operations/campaigns`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(payload)
@@ -226,6 +250,12 @@ const Campaigns = () => {
 
   const handleUpdateCampaign = async () => {
     try {
+      const token = await getAuthToken();
+      if (!token) {
+        toast.error('Please sign in to update campaigns.');
+        return;
+      }
+
       const payload = {
         title: currentCampaign.name,
         message: currentCampaign.messageContent,
@@ -239,7 +269,7 @@ const Campaigns = () => {
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/campaign-operations/campaigns/${currentCampaign.id}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload)
@@ -270,10 +300,16 @@ const Campaigns = () => {
     const campaign = campaigns.find(c => c.id === campaignId);
     if (campaign && window.confirm(`Are you sure you want to delete "${campaign.name}"? This action cannot be undone.`)) {
       try {
+        const token = await getAuthToken();
+        if (!token) {
+          toast.error('Please sign in to delete campaigns.');
+          return;
+        }
+
         const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/campaign-operations/campaigns/${campaignId}`, {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           }
         });
@@ -301,10 +337,16 @@ const Campaigns = () => {
     const campaign = campaigns.find(c => c.id === campaignId);
     if (campaign && window.confirm(`Are you sure you want to send "${campaign.name}" immediately?`)) {
       try {
+        const token = await getAuthToken();
+        if (!token) {
+          toast.error('Please sign in to send campaigns.');
+          return;
+        }
+
         const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/campaign-operations/campaigns/${campaignId}`, {
           method: 'PUT',
           headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ status: 'sending' })
@@ -671,7 +713,7 @@ const Campaigns = () => {
                       </button>
                       <button
                         type="button"
-                        onClick={() => toast.info('Media upload functionality would be implemented here')}
+                        onClick={() => toast('Media upload functionality would be implemented here')}
                         className="flex items-center px-3 py-1 bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded text-sm hover:bg-gray-200 dark:hover:bg-gray-500 transition-colors"
                       >
                         <Image className="h-4 w-4 mr-1" />
