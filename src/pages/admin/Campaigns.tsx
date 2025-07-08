@@ -123,11 +123,17 @@ const Campaigns = () => {
     } catch (error) {
       console.error('Error fetching contact lists:', error);
     }
-  };
-
+          title: newCampaign.name,
+          message: newCampaign.messageContent,
   const handleCreateCampaign = async () => {
-    if (newCampaign.name.trim() && newCampaign.messageContent.trim()) {
-      try {
+          media_url: newCampaign.mediaUrl,
+          campaign_type: newCampaign.campaignType,
+          target_contact_lists: cleanedSelectedLists,
+          scheduledDate: newCampaign.scheduledDate || null,
+          scheduleTime: newCampaign.scheduleTime || null,
+          message_template: newCampaign.templateId === 'custom' ? 'Custom Message' : newCampaign.templateId,
+        );
+
         const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/campaign-operations/campaigns`, {
           method: 'POST',
           headers: {
@@ -147,6 +153,7 @@ const Campaigns = () => {
           setCampaigns(prev => [data.data, ...prev]);
           console.log('Created campaign:', data.data);
           
+          // Reset state
           setNewCampaign({
             name: '',
             selectedLists: [],
@@ -167,6 +174,8 @@ const Campaigns = () => {
         console.error('Error creating campaign:', error);
         toast.error('Failed to create campaign. Please try again.');
       }
+    } else {
+      toast.error('Please fill in all required fields.');
     } else {
       toast.error('Please fill in all required fields.');
     }
