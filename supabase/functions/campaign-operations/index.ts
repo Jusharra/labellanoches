@@ -290,12 +290,12 @@ Deno.serve(async (req) => {
         .from('businesses')
         .select('id, webhook_url')
         .eq('name', 'La Bella Noches')
-        .single()
+        .maybeSingle()
 
-      if (businessError || !business) {
+      if (businessError) {
         const errorResponse: ErrorResponse = {
           success: false,
-          error: 'Could not find business to associate campaign with',
+          error: 'Error fetching business information',
           details: businessError
         }
         
@@ -308,6 +308,41 @@ Deno.serve(async (req) => {
         )
       }
 
+      // Create the business if it doesn't exist
+      let businessData = business
+      if (!businessData) {
+        const { data: newBusiness, error: createError } = await supabase
+          .from('businesses')
+          .insert({
+            name: 'La Bella Noches',
+            industry: 'Restaurant',
+            active: true,
+            timezone: 'UTC',
+            settings: {},
+            twilio_config: {}
+          })
+          .select('id, webhook_url')
+          .single()
+
+        if (createError) {
+          const errorResponse: ErrorResponse = {
+            success: false,
+            error: 'Failed to create business record',
+            details: createError
+          }
+          
+          return new Response(
+            JSON.stringify(errorResponse),
+            { 
+              status: 500, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          )
+        }
+
+        businessData = newBusiness
+      }
+
       // Determine schedule time
       let scheduledTime = null
       if (campaignData.scheduledDate && campaignData.scheduleTime) {
@@ -318,7 +353,7 @@ Deno.serve(async (req) => {
       const status = scheduledTime ? 'scheduled' : 'draft'
 
       const newCampaignData = {
-        business_id: business.id,
+        business_id: businessData.id,
         title: campaignData.name,
         message: campaignData.messageContent,
         message_template: campaignData.templateName || campaignData.selectedTemplate || 'Custom Message',
@@ -329,7 +364,7 @@ Deno.serve(async (req) => {
         campaign_type: campaignData.campaignType || 'Regular Campaign',
         media_url: campaignData.mediaUrl && campaignData.mediaUrl.trim() !== '' ? campaignData.mediaUrl : null,
         target_contact_lists: campaignData.selectedLists || [],
-        webhook_url: business.webhook_url || null
+        webhook_url: businessData.webhook_url || null
       }
 
       const { data: newCampaign, error } = await supabase
