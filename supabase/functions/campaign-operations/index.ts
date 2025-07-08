@@ -360,7 +360,7 @@ Deno.serve(async (req) => {
         channel: campaignData.channel,
         scheduled_time: scheduledTime,
         status: status,
-        created_by: null,
+        created_by: '00000000-0000-0000-0000-000000000001', // System user ID for admin panel operations
         campaign_type: campaignData.campaignType || 'Regular Campaign',
         media_url: campaignData.mediaUrl && campaignData.mediaUrl.trim() !== '' ? campaignData.mediaUrl : null,
         target_contact_lists: campaignData.selectedLists || [],
