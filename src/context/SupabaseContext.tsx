@@ -52,7 +52,15 @@ export const SupabaseProvider: React.FC<SupabaseProviderProps> = ({ children }) 
         if (userId) {
           try {
             console.log('🔐 User authenticated in Clerk, getting session token...');
-            const token = await getToken({ template: 'supabase' });
+            let token;
+            try {
+              // Try to get token with supabase template first
+              token = await getToken({ template: 'supabase' });
+            } catch (templateError) {
+              // If template doesn't exist, fall back to default token
+              console.log('ℹ️ Supabase template not found, using default token');
+              token = await getToken();
+            }
             
             if (token) {
               console.log('✅ Got Clerk session token, setting in Supabase client');
@@ -91,7 +99,15 @@ export const SupabaseProvider: React.FC<SupabaseProviderProps> = ({ children }) 
 
     const updateToken = async () => {
       try {
-        const token = await getToken({ template: 'supabase' });
+        let token;
+        try {
+          // Try to get token with supabase template first
+          token = await getToken({ template: 'supabase' });
+        } catch (templateError) {
+          // If template doesn't exist, fall back to default token
+          token = await getToken();
+        }
+        
         if (token) {
           await supabase.auth.setSession({
             access_token: token,
