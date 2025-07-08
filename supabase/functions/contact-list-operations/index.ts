@@ -57,6 +57,19 @@ async function validateClerkAuth(req: Request, supabaseUrl: string, serviceRoleK
   try {
     // Extract the user ID from the token without verification for now
     const payload = JSON.parse(atob(token.split('.')[1])) as ClerkJWTPayload
+    
+    // Check if token has expired
+    const currentTime = Math.floor(Date.now() / 1000)
+    if (payload.exp && currentTime > payload.exp) {
+      return {
+        error: {
+          success: false,
+          error: 'Authentication token has expired. Please sign in again.',
+          status: 401
+        }
+      }
+    }
+    
     const userId = payload.sub
 
     if (!userId) {
