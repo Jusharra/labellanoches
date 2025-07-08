@@ -168,6 +168,7 @@ async function handleGetLists(supabase: any, searchParams: URLSearchParams) {
   
   const businessId = searchParams.get('business_id')
 
+  // Step 1: Fetch contact lists without member counts
   let query = supabase
     .from('contact_lists')
     .select(`
@@ -175,8 +176,7 @@ async function handleGetLists(supabase: any, searchParams: URLSearchParams) {
       list_name,
       description,
       created_at,
-      business_id,
-      contact_list_members(count)
+      business_id
     `)
 
   if (businessId) {
@@ -202,13 +202,47 @@ async function handleGetLists(supabase: any, searchParams: URLSearchParams) {
     )
   }
 
-  const transformedLists = lists?.map(list => ({
+  if (!lists || lists.length === 0) {
+    console.log('✅ No contact lists found')
+    const successResponse: SuccessResponse = {
+      success: true,
+      data: []
+    }
+
+    return new Response(
+      JSON.stringify(successResponse),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
+
+  // Step 2: Get member counts for all lists
+  const listIds = lists.map(list => list.id)
+  const { data: memberCounts, error: countsError } = await supabase
+    .from('contact_list_members')
+    .select('contact_list_id')
+    .in('contact_list_id', listIds)
+
+  if (countsError) {
+    console.error('Error fetching member counts:', countsError)
+    // Continue without counts rather than failing completely
+  }
+
+  // Step 3: Create a map of list ID to member count
+  const countsByListId: { [listId: string]: number } = {}
+  if (memberCounts) {
+    memberCounts.forEach(member => {
+      countsByListId[member.contact_list_id] = (countsByListId[member.contact_list_id] || 0) + 1
+    })
+  }
+
+  // Step 4: Transform lists with member counts
+  const transformedLists = lists.map(list => ({
     id: list.id,
     name: list.list_name,
     description: list.description,
-    contactCount: list.contact_list_members?.[0]?.count || 0,
+    contactCount: countsByListId[list.id] || 0,
     createdDate: new Date(list.created_at).toISOString().split('T')[0]
-  })) || []
+  }))
 
   console.log('✅ Successfully fetched contact lists:', transformedLists.length)
 
