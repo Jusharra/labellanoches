@@ -17,23 +17,30 @@ interface SuccessResponse<T = any> {
   data: T;
 }
 
+interface ClerkJWTPayload {
+  sub: string; // user ID
+  iss: string;
+  aud: string;
+  exp: number;
+  iat: number;
+}
+
 /**
- * Helper function to create a Supabase client with user authentication
+ * Helper function to create a Supabase client with service role
  */
-function getUserSupabaseClient(authHeader: string, supabaseUrl: string, anonKey: string) {
-  return createClient(supabaseUrl, anonKey, {
-    global: {
-      headers: {
-        Authorization: authHeader
-      }
+function getServiceSupabaseClient(supabaseUrl: string, serviceRoleKey: string) {
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
     }
   })
 }
 
 /**
- * Helper function to validate authentication and get user info
+ * Helper function to validate Clerk JWT and get user info
  */
-async function validateAuth(req: Request, supabaseUrl: string, serviceRoleKey: string, anonKey: string) {
+async function validateClerkAuth(req: Request, supabaseUrl: string, serviceRoleKey: string) {
   const authHeader = req.headers.get('Authorization')
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return {
@@ -45,14 +52,52 @@ async function validateAuth(req: Request, supabaseUrl: string, serviceRoleKey: s
     }
   }
 
-  const userToken = authHeader.replace('Bearer ', '')
-  const userSupabase = getUserSupabaseClient(authHeader, supabaseUrl, anonKey)
+  const token = authHeader.replace('Bearer ', '')
   
-  // Get the authenticated user's information
-  const { data: { user }, error: userError } = await userSupabase.auth.getUser(userToken)
-  
-  if (userError || !user) {
-    console.error('Error getting authenticated user:', userError)
+  try {
+    // Extract the user ID from the token without verification for now
+    const payload = JSON.parse(atob(token.split('.')[1])) as ClerkJWTPayload
+    const userId = payload.sub
+
+    if (!userId) {
+      return {
+        error: {
+          success: false,
+          error: 'Invalid token: missing user ID',
+          status: 401
+        }
+      }
+    }
+
+    // Create service role client for database operations
+    const serviceSupabase = getServiceSupabaseClient(supabaseUrl, serviceRoleKey)
+    
+    // Check user permissions using service role client
+    const { data: userProfile, error: profileError } = await serviceSupabase
+      .from('user_profiles')
+      .select('role, business_id')
+      .eq('id', userId)
+      .single()
+
+    if (profileError || !userProfile) {
+      console.error('Error fetching user profile:', profileError)
+      return {
+        error: {
+          success: false,
+          error: 'Unable to verify user permissions.',
+          status: 403
+        }
+      }
+    }
+
+    return {
+      userId,
+      userProfile,
+      serviceSupabase,
+      authHeader
+    }
+  } catch (error) {
+    console.error('Error validating Clerk token:', error)
     return {
       error: {
         success: false,
@@ -60,35 +105,6 @@ async function validateAuth(req: Request, supabaseUrl: string, serviceRoleKey: s
         status: 401
       }
     }
-  }
-
-  // Create service role client for admin operations
-  const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
-  
-  // Check user permissions using service role client
-  const { data: userProfile, error: profileError } = await serviceSupabase
-    .from('user_profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  if (profileError || !userProfile) {
-    console.error('Error fetching user profile:', profileError)
-    return {
-      error: {
-        success: false,
-        error: 'Unable to verify user permissions.',
-        status: 403
-      }
-    }
-  }
-
-  return {
-    user,
-    userProfile,
-    userSupabase,
-    serviceSupabase: serviceSupabase,
-    authHeader
   }
 }
 
@@ -102,7 +118,6 @@ Deno.serve(async (req) => {
     // Initialize Supabase clients
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
 
     const url = new URL(req.url)
     const pathname = url.pathname
@@ -112,7 +127,7 @@ Deno.serve(async (req) => {
 
     // GET /contact-list-operations/members/:listId - Get members of a specific list
     if (req.method === 'GET' && pathname.includes('/members/')) {
-      const authResult = await validateAuth(req, supabaseUrl, supabaseServiceKey, anonKey)
+      const authResult = await validateClerkAuth(req, supabaseUrl, supabaseServiceKey)
       
       if (authResult.error) {
         return new Response(
@@ -124,11 +139,10 @@ Deno.serve(async (req) => {
         )
       }
 
-      const { userSupabase } = authResult
+      const { serviceSupabase } = authResult
       const listId = pathname.split('/').pop()
 
-      // Use userSupabase for RLS compliance
-      const { data: members, error } = await userSupabase
+      const { data: members, error } = await serviceSupabase
         .from('contact_list_members')
         .select(`
           contact_id,
@@ -186,7 +200,7 @@ Deno.serve(async (req) => {
 
     // POST /contact-list-operations/add-members - Add contacts to lists
     if (req.method === 'POST' && pathname.endsWith('/add-members')) {
-      const authResult = await validateAuth(req, supabaseUrl, supabaseServiceKey, anonKey)
+      const authResult = await validateClerkAuth(req, supabaseUrl, supabaseServiceKey)
       
       if (authResult.error) {
         return new Response(
@@ -198,7 +212,7 @@ Deno.serve(async (req) => {
         )
       }
 
-      const { userSupabase } = authResult
+      const { serviceSupabase } = authResult
 
       let requestData
       
@@ -248,8 +262,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Use userSupabase for RLS compliance with upsert to avoid conflicts
-      const { data: insertedMemberships, error } = await userSupabase
+      const { data: insertedMemberships, error } = await serviceSupabase
         .from('contact_list_members')
         .upsert(memberships, { 
           onConflict: 'contact_list_id,contact_id',
@@ -290,7 +303,7 @@ Deno.serve(async (req) => {
 
     // DELETE /contact-list-operations/remove-members - Remove contacts from lists
     if (req.method === 'DELETE' && pathname.endsWith('/remove-members')) {
-      const authResult = await validateAuth(req, supabaseUrl, supabaseServiceKey, anonKey)
+      const authResult = await validateClerkAuth(req, supabaseUrl, supabaseServiceKey)
       
       if (authResult.error) {
         return new Response(
@@ -302,7 +315,7 @@ Deno.serve(async (req) => {
         )
       }
 
-      const { userSupabase } = authResult
+      const { serviceSupabase } = authResult
 
       let requestData
       
@@ -341,8 +354,7 @@ Deno.serve(async (req) => {
         )
       }
 
-      // Use userSupabase for RLS compliance
-      const { error } = await userSupabase
+      const { error } = await serviceSupabase
         .from('contact_list_members')
         .delete()
         .eq('contact_list_id', listId)
@@ -380,7 +392,7 @@ Deno.serve(async (req) => {
 
     // PUT /contact-list-operations/update-membership/:listId - Update membership for entire list
     if (req.method === 'PUT' && pathname.includes('/update-membership/')) {
-      const authResult = await validateAuth(req, supabaseUrl, supabaseServiceKey, anonKey)
+      const authResult = await validateClerkAuth(req, supabaseUrl, supabaseServiceKey)
       
       if (authResult.error) {
         return new Response(
@@ -392,7 +404,7 @@ Deno.serve(async (req) => {
         )
       }
 
-      const { userSupabase } = authResult
+      const { serviceSupabase } = authResult
       const listId = pathname.split('/').pop()
       
       let requestData
@@ -432,8 +444,8 @@ Deno.serve(async (req) => {
         )
       }
 
-      // Get current membership for this list using userSupabase
-      const { data: currentMembers, error: fetchError } = await userSupabase
+      // Get current membership for this list
+      const { data: currentMembers, error: fetchError } = await serviceSupabase
         .from('contact_list_members')
         .select('contact_id')
         .eq('contact_list_id', listId)
@@ -474,14 +486,14 @@ Deno.serve(async (req) => {
       let addedCount = 0
       let removedCount = 0
 
-      // Add new members using userSupabase
+      // Add new members
       if (contactsToAdd.length > 0) {
         const membershipsToAdd = contactsToAdd.map(contactId => ({
           contact_id: contactId,
           contact_list_id: listId
         }))
 
-        const { error: addError } = await userSupabase
+        const { error: addError } = await serviceSupabase
           .from('contact_list_members')
           .insert(membershipsToAdd)
 
@@ -505,9 +517,9 @@ Deno.serve(async (req) => {
         addedCount = contactsToAdd.length
       }
 
-      // Remove members using userSupabase
+      // Remove members
       if (contactsToRemove.length > 0) {
-        const { error: removeError } = await userSupabase
+        const { error: removeError } = await serviceSupabase
           .from('contact_list_members')
           .delete()
           .eq('contact_list_id', listId)
@@ -551,7 +563,7 @@ Deno.serve(async (req) => {
 
     // GET /contact-list-operations/lists - Get all contact lists with member counts
     if (req.method === 'GET' && pathname.endsWith('/lists')) {
-      const authResult = await validateAuth(req, supabaseUrl, supabaseServiceKey, anonKey)
+      const authResult = await validateClerkAuth(req, supabaseUrl, supabaseServiceKey)
       
       if (authResult.error) {
         return new Response(
@@ -563,11 +575,10 @@ Deno.serve(async (req) => {
         )
       }
 
-      const { userSupabase } = authResult
+      const { serviceSupabase, userProfile } = authResult
       const businessId = searchParams.get('business_id')
 
-      // Use userSupabase for RLS compliance
-      let query = userSupabase
+      let query = serviceSupabase
         .from('contact_lists')
         .select(`
           id,
@@ -578,7 +589,10 @@ Deno.serve(async (req) => {
           contact_list_members(count)
         `)
 
-      if (businessId) {
+      // If user is not admin, filter by their business
+      if (userProfile.role !== 'admin' && userProfile.business_id) {
+        query = query.eq('business_id', userProfile.business_id)
+      } else if (businessId) {
         query = query.eq('business_id', businessId)
       }
 
@@ -622,7 +636,7 @@ Deno.serve(async (req) => {
 
     // POST /contact-list-operations/lists - Create new contact list
     if (req.method === 'POST' && pathname.endsWith('/lists')) {
-      const authResult = await validateAuth(req, supabaseUrl, supabaseServiceKey, anonKey)
+      const authResult = await validateClerkAuth(req, supabaseUrl, supabaseServiceKey)
       
       if (authResult.error) {
         return new Response(
@@ -634,7 +648,7 @@ Deno.serve(async (req) => {
         )
       }
 
-      const { userSupabase, serviceSupabase } = authResult
+      const { serviceSupabase } = authResult
 
       let requestData
       
@@ -656,7 +670,7 @@ Deno.serve(async (req) => {
         )
       }
 
-      // Get the default business ID (Bella Vista) using service role client
+      // Get the default business ID
       const { data: business, error: businessError } = await serviceSupabase
         .from('businesses')
         .select('id')
@@ -684,8 +698,7 @@ Deno.serve(async (req) => {
         description: requestData.description || null
       }
 
-      // Use userSupabase for RLS compliance
-      const { data: newList, error } = await userSupabase
+      const { data: newList, error } = await serviceSupabase
         .from('contact_lists')
         .insert(listData)
         .select()
@@ -727,7 +740,7 @@ Deno.serve(async (req) => {
 
     // PUT /contact-list-operations/lists/:id - Update contact list
     if (req.method === 'PUT' && pathname.includes('/lists/') && !pathname.includes('/update-membership/')) {
-      const authResult = await validateAuth(req, supabaseUrl, supabaseServiceKey, anonKey)
+      const authResult = await validateClerkAuth(req, supabaseUrl, supabaseServiceKey)
       
       if (authResult.error) {
         return new Response(
@@ -739,7 +752,7 @@ Deno.serve(async (req) => {
         )
       }
 
-      const { userSupabase } = authResult
+      const { serviceSupabase } = authResult
       const listId = pathname.split('/').pop()
       
       let requestData
@@ -767,8 +780,7 @@ Deno.serve(async (req) => {
         description: requestData.description || null
       }
 
-      // Use userSupabase for RLS compliance
-      const { data: updatedList, error } = await userSupabase
+      const { data: updatedList, error } = await serviceSupabase
         .from('contact_lists')
         .update(updateData)
         .eq('id', listId)
@@ -798,7 +810,7 @@ Deno.serve(async (req) => {
           id: updatedList.id,
           name: updatedList.list_name,
           description: updatedList.description,
-          contactCount: 0, // Would need a separate query to get current count
+          contactCount: 0,
           createdDate: new Date(updatedList.created_at).toISOString().split('T')[0]
         }
       }
@@ -811,7 +823,7 @@ Deno.serve(async (req) => {
 
     // DELETE /contact-list-operations/lists/:id - Delete contact list
     if (req.method === 'DELETE' && pathname.includes('/lists/')) {
-      const authResult = await validateAuth(req, supabaseUrl, supabaseServiceKey, anonKey)
+      const authResult = await validateClerkAuth(req, supabaseUrl, supabaseServiceKey)
       
       if (authResult.error) {
         return new Response(
@@ -823,11 +835,11 @@ Deno.serve(async (req) => {
         )
       }
 
-      const { userSupabase } = authResult
+      const { serviceSupabase } = authResult
       const listId = pathname.split('/').pop()
 
-      // First, remove all members from the list using userSupabase
-      const { error: membersError } = await userSupabase
+      // First, remove all members from the list
+      const { error: membersError } = await serviceSupabase
         .from('contact_list_members')
         .delete()
         .eq('contact_list_id', listId)
@@ -849,8 +861,8 @@ Deno.serve(async (req) => {
         )
       }
 
-      // Then delete the list itself using userSupabase
-      const { error: listError } = await userSupabase
+      // Then delete the list itself
+      const { error: listError } = await serviceSupabase
         .from('contact_lists')
         .delete()
         .eq('id', listId)

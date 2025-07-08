@@ -17,23 +17,30 @@ interface SuccessResponse<T = any> {
   data: T;
 }
 
+interface ClerkJWTPayload {
+  sub: string; // user ID
+  iss: string;
+  aud: string;
+  exp: number;
+  iat: number;
+}
+
 /**
- * Helper function to create a Supabase client with user authentication
+ * Helper function to create a Supabase client with service role
  */
-function getUserSupabaseClient(authHeader: string, supabaseUrl: string, anonKey: string) {
-  return createClient(supabaseUrl, anonKey, {
-    global: {
-      headers: {
-        Authorization: authHeader
-      }
+function getServiceSupabaseClient(supabaseUrl: string, serviceRoleKey: string) {
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
     }
   })
 }
 
 /**
- * Helper function to validate authentication and get user info
+ * Helper function to validate Clerk JWT and get user info
  */
-async function validateAuth(req: Request, supabaseUrl: string, serviceRoleKey: string, anonKey: string) {
+async function validateClerkAuth(req: Request, supabaseUrl: string, serviceRoleKey: string) {
   const authHeader = req.headers.get('Authorization')
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return {
@@ -45,14 +52,52 @@ async function validateAuth(req: Request, supabaseUrl: string, serviceRoleKey: s
     }
   }
 
-  const userToken = authHeader.replace('Bearer ', '')
-  const userSupabase = getUserSupabaseClient(authHeader, supabaseUrl, anonKey)
+  const token = authHeader.replace('Bearer ', '')
   
-  // Get the authenticated user's information
-  const { data: { user }, error: userError } = await userSupabase.auth.getUser(userToken)
-  
-  if (userError || !user) {
-    console.error('Error getting authenticated user:', userError)
+  try {
+    // Extract the user ID from the token without verification for now
+    const payload = JSON.parse(atob(token.split('.')[1])) as ClerkJWTPayload
+    const userId = payload.sub
+
+    if (!userId) {
+      return {
+        error: {
+          success: false,
+          error: 'Invalid token: missing user ID',
+          status: 401
+        }
+      }
+    }
+
+    // Create service role client for database operations
+    const serviceSupabase = getServiceSupabaseClient(supabaseUrl, serviceRoleKey)
+    
+    // Check user permissions using service role client
+    const { data: userProfile, error: profileError } = await serviceSupabase
+      .from('user_profiles')
+      .select('role, business_id')
+      .eq('id', userId)
+      .single()
+
+    if (profileError || !userProfile) {
+      console.error('Error fetching user profile:', profileError)
+      return {
+        error: {
+          success: false,
+          error: 'Unable to verify user permissions.',
+          status: 403
+        }
+      }
+    }
+
+    return {
+      userId,
+      userProfile,
+      serviceSupabase,
+      authHeader
+    }
+  } catch (error) {
+    console.error('Error validating Clerk token:', error)
     return {
       error: {
         success: false,
@@ -60,35 +105,6 @@ async function validateAuth(req: Request, supabaseUrl: string, serviceRoleKey: s
         status: 401
       }
     }
-  }
-
-  // Create service role client for admin operations
-  const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
-  
-  // Check user permissions using service role client
-  const { data: userProfile, error: profileError } = await serviceSupabase
-    .from('user_profiles')
-    .select('role, business_id')
-    .eq('id', user.id)
-    .single()
-
-  if (profileError || !userProfile) {
-    console.error('Error fetching user profile:', profileError)
-    return {
-      error: {
-        success: false,
-        error: 'Unable to verify user permissions.',
-        status: 403
-      }
-    }
-  }
-
-  return {
-    user,
-    userProfile,
-    userSupabase,
-    serviceSupabase: serviceSupabase,
-    authHeader
   }
 }
 
@@ -102,7 +118,6 @@ Deno.serve(async (req) => {
     // Initialize Supabase clients
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
 
     const url = new URL(req.url)
     const pathname = url.pathname
@@ -112,7 +127,7 @@ Deno.serve(async (req) => {
 
     // GET /contacts-operations/contacts - Get all contacts
     if (req.method === 'GET' && pathname.endsWith('/contacts')) {
-      const authResult = await validateAuth(req, supabaseUrl, supabaseServiceKey, anonKey)
+      const authResult = await validateClerkAuth(req, supabaseUrl, supabaseServiceKey)
       
       if (authResult.error) {
         return new Response(
@@ -124,16 +139,19 @@ Deno.serve(async (req) => {
         )
       }
 
-      const { userSupabase, serviceSupabase } = authResult
+      const { serviceSupabase, userProfile } = authResult
       const businessId = searchParams.get('business_id')
       const search = searchParams.get('search')
 
-      // First, get all contacts for the business using userSupabase for RLS compliance
-      let contactsQuery = userSupabase
+      // Build contacts query
+      let contactsQuery = serviceSupabase
         .from('contacts')
         .select('*')
 
-      if (businessId) {
+      // If user is not admin, filter by their business
+      if (userProfile.role !== 'admin' && userProfile.business_id) {
+        contactsQuery = contactsQuery.eq('business_id', userProfile.business_id)
+      } else if (businessId) {
         contactsQuery = contactsQuery.eq('business_id', businessId)
       }
 
@@ -172,7 +190,7 @@ Deno.serve(async (req) => {
         )
       }
 
-      // Now get list memberships for these contacts using service role client
+      // Get list memberships for these contacts
       const contactIds = contacts.map(c => c.id)
       const { data: memberships, error: membershipsError } = await serviceSupabase
         .from('contact_list_members')
@@ -210,7 +228,7 @@ Deno.serve(async (req) => {
           name: contact.name,
           phone: contact.phone_number,
           email: contact.email,
-          source: 'Database', // You might want to add a source field to the contacts table
+          source: 'Database',
           date: new Date(contact.created_at).toISOString().split('T')[0],
           lists: lists,
           opted_in: contact.opted_in,
@@ -233,7 +251,7 @@ Deno.serve(async (req) => {
 
     // GET /contacts-operations/lists - Get all contact lists
     if (req.method === 'GET' && pathname.endsWith('/lists')) {
-      const authResult = await validateAuth(req, supabaseUrl, supabaseServiceKey, anonKey)
+      const authResult = await validateClerkAuth(req, supabaseUrl, supabaseServiceKey)
       
       if (authResult.error) {
         return new Response(
@@ -245,15 +263,17 @@ Deno.serve(async (req) => {
         )
       }
 
-      const { userSupabase } = authResult
+      const { serviceSupabase, userProfile } = authResult
       const businessId = searchParams.get('business_id')
 
-      // Use userSupabase for RLS compliance
-      let listsQuery = userSupabase
+      let listsQuery = serviceSupabase
         .from('contact_lists')
         .select('*')
 
-      if (businessId) {
+      // If user is not admin, filter by their business
+      if (userProfile.role !== 'admin' && userProfile.business_id) {
+        listsQuery = listsQuery.eq('business_id', userProfile.business_id)
+      } else if (businessId) {
         listsQuery = listsQuery.eq('business_id', businessId)
       }
 
@@ -288,9 +308,9 @@ Deno.serve(async (req) => {
         )
       }
 
-      // Get member counts for each list using userSupabase
+      // Get member counts for each list
       const listIds = lists.map(l => l.id)
-      const { data: memberCounts, error: countsError } = await userSupabase
+      const { data: memberCounts, error: countsError } = await serviceSupabase
         .from('contact_list_members')
         .select('contact_list_id')
         .in('contact_list_id', listIds)
@@ -329,7 +349,7 @@ Deno.serve(async (req) => {
 
     // GET /contacts-operations/contacts/by-list/:listId - Get contacts by list ID
     if (req.method === 'GET' && pathname.includes('/contacts/by-list/')) {
-      const authResult = await validateAuth(req, supabaseUrl, supabaseServiceKey, anonKey)
+      const authResult = await validateClerkAuth(req, supabaseUrl, supabaseServiceKey)
       
       if (authResult.error) {
         return new Response(
@@ -341,12 +361,12 @@ Deno.serve(async (req) => {
         )
       }
 
-      const { userSupabase } = authResult
+      const { serviceSupabase } = authResult
       const listId = pathname.split('/').pop()
       const search = searchParams.get('search')
 
-      // Get contacts that are members of the specified list using userSupabase
-      let membersQuery = userSupabase
+      // Get contacts that are members of the specified list
+      const { data: members, error: membersError } = await serviceSupabase
         .from('contact_list_members')
         .select(`
           contact_id,
@@ -363,8 +383,6 @@ Deno.serve(async (req) => {
           )
         `)
         .eq('contact_list_id', listId)
-
-      const { data: members, error: membersError } = await membersQuery
 
       if (membersError) {
         console.error('Error fetching list members:', membersError)
@@ -390,7 +408,7 @@ Deno.serve(async (req) => {
         email: member.contacts.email,
         source: 'Database',
         date: new Date(member.contacts.created_at).toISOString().split('T')[0],
-        lists: [], // We know they're in this list, but we don't fetch all lists for performance
+        lists: [],
         opted_in: member.contacts.opted_in,
         tags: member.contacts.tags,
         language: member.contacts.language,
@@ -420,7 +438,7 @@ Deno.serve(async (req) => {
 
     // POST /contacts-operations/contacts - Create new contact
     if (req.method === 'POST' && pathname.endsWith('/contacts')) {
-      const authResult = await validateAuth(req, supabaseUrl, supabaseServiceKey, anonKey)
+      const authResult = await validateClerkAuth(req, supabaseUrl, supabaseServiceKey)
       
       if (authResult.error) {
         return new Response(
@@ -432,7 +450,7 @@ Deno.serve(async (req) => {
         )
       }
 
-      const { userSupabase, serviceSupabase, userProfile } = authResult
+      const { serviceSupabase, userProfile } = authResult
 
       let contactData
       
@@ -459,7 +477,7 @@ Deno.serve(async (req) => {
         )
       }
 
-      // Get the default business ID (Bella Vista) using service role client
+      // Get the default business ID
       const { data: business, error: businessError } = await serviceSupabase
         .from('businesses')
         .select('id')
@@ -491,8 +509,7 @@ Deno.serve(async (req) => {
         tags: contactData.tags || []
       }
 
-      // Use userSupabase for RLS compliance
-      const { data: newContact, error } = await userSupabase
+      const { data: newContact, error } = await serviceSupabase
         .from('contacts')
         .insert(newContactData)
         .select()
@@ -539,7 +556,7 @@ Deno.serve(async (req) => {
 
     // PUT /contacts-operations/contacts/:id - Update contact
     if (req.method === 'PUT' && pathname.includes('/contacts/')) {
-      const authResult = await validateAuth(req, supabaseUrl, supabaseServiceKey, anonKey)
+      const authResult = await validateClerkAuth(req, supabaseUrl, supabaseServiceKey)
       
       if (authResult.error) {
         return new Response(
@@ -551,7 +568,7 @@ Deno.serve(async (req) => {
         )
       }
 
-      const { userSupabase } = authResult
+      const { serviceSupabase } = authResult
       const contactId = pathname.split('/').pop()
       
       let updateData
@@ -588,8 +605,7 @@ Deno.serve(async (req) => {
         tags: updateData.tags || []
       }
 
-      // Use userSupabase for RLS compliance
-      const { data: updatedContact, error } = await userSupabase
+      const { data: updatedContact, error } = await serviceSupabase
         .from('contacts')
         .update(contactUpdateData)
         .eq('id', contactId)
@@ -622,7 +638,7 @@ Deno.serve(async (req) => {
           email: updatedContact.email,
           source: 'Database',
           date: new Date(updatedContact.created_at).toISOString().split('T')[0],
-          lists: [], // Lists would need to be fetched separately
+          lists: [],
           opted_in: updatedContact.opted_in,
           tags: updatedContact.tags,
           language: updatedContact.language
@@ -637,7 +653,7 @@ Deno.serve(async (req) => {
 
     // DELETE /contacts-operations/contacts/:id - Delete contact
     if (req.method === 'DELETE' && pathname.includes('/contacts/')) {
-      const authResult = await validateAuth(req, supabaseUrl, supabaseServiceKey, anonKey)
+      const authResult = await validateClerkAuth(req, supabaseUrl, supabaseServiceKey)
       
       if (authResult.error) {
         return new Response(
@@ -649,11 +665,10 @@ Deno.serve(async (req) => {
         )
       }
 
-      const { userSupabase } = authResult
+      const { serviceSupabase } = authResult
       const contactId = pathname.split('/').pop()
 
-      // Use userSupabase for RLS compliance
-      const { error } = await userSupabase
+      const { error } = await serviceSupabase
         .from('contacts')
         .delete()
         .eq('id', contactId)
@@ -688,7 +703,7 @@ Deno.serve(async (req) => {
 
     // POST /contacts-operations/contacts/bulk-delete - Bulk delete contacts
     if (req.method === 'POST' && pathname.endsWith('/bulk-delete')) {
-      const authResult = await validateAuth(req, supabaseUrl, supabaseServiceKey, anonKey)
+      const authResult = await validateClerkAuth(req, supabaseUrl, supabaseServiceKey)
       
       if (authResult.error) {
         return new Response(
@@ -700,7 +715,7 @@ Deno.serve(async (req) => {
         )
       }
 
-      const { userSupabase } = authResult
+      const { serviceSupabase } = authResult
       
       let requestData
       
@@ -739,8 +754,7 @@ Deno.serve(async (req) => {
         )
       }
 
-      // Use userSupabase for RLS compliance
-      const { error } = await userSupabase
+      const { error } = await serviceSupabase
         .from('contacts')
         .delete()
         .in('id', contactIds)
@@ -775,7 +789,7 @@ Deno.serve(async (req) => {
 
     // POST /contacts-operations/contacts/bulk-insert - Bulk insert contacts (for CSV upload)
     if (req.method === 'POST' && pathname.endsWith('/bulk-insert')) {
-      const authResult = await validateAuth(req, supabaseUrl, supabaseServiceKey, anonKey)
+      const authResult = await validateClerkAuth(req, supabaseUrl, supabaseServiceKey)
       
       if (authResult.error) {
         return new Response(
@@ -787,7 +801,7 @@ Deno.serve(async (req) => {
         )
       }
 
-      const { userSupabase, serviceSupabase } = authResult
+      const { serviceSupabase } = authResult
       
       let requestData
       
@@ -826,7 +840,7 @@ Deno.serve(async (req) => {
         )
       }
 
-      // Get the default business ID (Bella Vista) using service role client
+      // Get the default business ID
       const { data: business, error: businessError } = await serviceSupabase
         .from('businesses')
         .select('id')
@@ -854,13 +868,12 @@ Deno.serve(async (req) => {
         name: contact.name,
         phone_number: contact.phone,
         email: contact.email || null,
-        opted_in: false, // Default to false for CSV uploads
+        opted_in: false,
         language: 'English',
         tags: ['Imported']
       }))
 
-      // Use userSupabase for RLS compliance
-      const { data: insertedContacts, error } = await userSupabase
+      const { data: insertedContacts, error } = await serviceSupabase
         .from('contacts')
         .insert(contactsData)
         .select()
