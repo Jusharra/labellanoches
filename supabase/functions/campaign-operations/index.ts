@@ -288,7 +288,7 @@ Deno.serve(async (req) => {
       // Get the Bella Vista business ID
       const { data: business, error: businessError } = await supabase
         .from('businesses')
-        .select('id, webhook_url')
+        .select('id, webhook_url, twilio_number')
         .eq('name', 'La Bella Noches')
         .single()
 
@@ -322,6 +322,9 @@ Deno.serve(async (req) => {
         typeof id === 'string' ? id.replace(/"/g, '') : id
       );
 
+      console.log('Creating campaign with user ID:', user.id)
+      console.log('Business twilio_number:', business.twilio_number)
+
       const newCampaignData = {
         business_id: business.id,
         title: campaignData.name,
@@ -334,7 +337,8 @@ Deno.serve(async (req) => {
         campaign_type: campaignData.campaignType || 'Regular Campaign',
         media_url: campaignData.mediaUrl && campaignData.mediaUrl.trim() !== '' ? campaignData.mediaUrl : null,
         target_contact_lists: cleanedLists,
-        webhook_url: business.webhook_url || null
+        webhook_url: business.webhook_url || null,
+        from_number: business.twilio_number || null // Use business Twilio number
       }
 
       // Use the user's Supabase client for RLS compliance
