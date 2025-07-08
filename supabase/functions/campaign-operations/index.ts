@@ -189,6 +189,77 @@ Deno.serve(async (req) => {
 
     // POST /campaign-operations/campaigns - Create new campaign
     if (req.method === 'POST' && pathname.endsWith('/campaigns')) {
+      // Extract the user's authorization token from request headers
+      const authHeader = req.headers.get('Authorization')
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        console.error('Missing or invalid Authorization header')
+        const errorResponse: ErrorResponse = {
+          success: false,
+          error: 'Authentication required. Please sign in to create campaigns.'
+        }
+        
+        return new Response(
+          JSON.stringify(errorResponse),
+          { 
+            status: 401, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+
+      const userToken = authHeader.replace('Bearer ', '')
+      
+      // Create a new Supabase client using the user's token for RLS compliance
+      const userSupabase = createClient(supabaseUrl, import.meta.env.SUPABASE_ANON_KEY || Deno.env.get('SUPABASE_ANON_KEY')!, {
+        global: {
+          headers: {
+            Authorization: authHeader
+          }
+        }
+      })
+
+      // Get the authenticated user's information
+      const { data: { user }, error: userError } = await userSupabase.auth.getUser(userToken)
+      
+      if (userError || !user) {
+        console.error('Error getting authenticated user:', userError)
+        const errorResponse: ErrorResponse = {
+          success: false,
+          error: 'Invalid authentication token. Please sign in again.'
+        }
+        
+        return new Response(
+          JSON.stringify(errorResponse),
+          { 
+            status: 401, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+
+      // Verify user has admin permissions
+      const { data: userProfile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      if (profileError || !userProfile || userProfile.role !== 'admin') {
+        console.error('User does not have admin permissions:', profileError)
+        const errorResponse: ErrorResponse = {
+          success: false,
+          error: 'Admin permissions required to create campaigns.'
+        }
+        
+        return new Response(
+          JSON.stringify(errorResponse),
+          { 
+            status: 403, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+
       let campaignData
       
       try {
@@ -254,14 +325,15 @@ Deno.serve(async (req) => {
         channel: campaignData.channel,
         scheduled_time: scheduledTime,
         status: status,
-        created_by: null,
+        created_by: user.id, // Use the authenticated user's ID
         campaign_type: campaignData.campaignType || 'Regular Campaign',
         media_url: campaignData.mediaUrl && campaignData.mediaUrl.trim() !== '' ? campaignData.mediaUrl : null,
         target_contact_lists: campaignData.selectedLists || [],
         webhook_url: business.webhook_url || null
       }
 
-      const { data: newCampaign, error } = await supabase
+      // Use the user's Supabase client for RLS compliance
+      const { data: newCampaign, error } = await userSupabase
         .from('campaigns')
         .insert(newCampaignData)
         .select()
