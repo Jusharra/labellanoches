@@ -1,51 +1,10 @@
 import React from 'react';
 import { Users, MessageSquare, Send, TrendingUp } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
-
-// Initialize Supabase client
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
 
 const Dashboard = () => {
-  const [campaigns, setCampaigns] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  // Initialize campaigns as empty array since campaign-operations function was removed
+  const campaigns: any[] = [];
   
-  // Fetch campaigns on component mount
-  React.useEffect(() => {
-    fetchCampaigns();
-  }, []);
-
-  const fetchCampaigns = async () => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/campaign-operations/campaigns`, {
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      if (data?.success) {
-        setCampaigns(data.data);
-      } else {
-        throw new Error(data?.error || 'Failed to fetch campaigns');
-      }
-    } catch (error) {
-      console.error('Error fetching campaigns:', error);
-      setCampaigns([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  // Mock data - in real app, fetch from Airtable
   const stats = [
     {
       name: 'Total Contacts',
@@ -56,14 +15,14 @@ const Dashboard = () => {
     },
     {
       name: 'Active Campaigns',
-      value: loading ? '...' : campaigns.filter(c => c.status === 'scheduled' || c.status === 'draft').length.toString(),
+      value: campaigns.filter(c => c.status === 'scheduled' || c.status === 'draft').length.toString(),
       change: '+3',
       changeType: 'increase',
       icon: Send,
     },
     {
       name: 'Messages Sent',
-      value: loading ? '...' : campaigns.reduce((total, campaign) => total + campaign.sentCount, 0).toLocaleString(),
+      value: campaigns.reduce((total, campaign) => total + campaign.sentCount, 0).toLocaleString(),
       change: '+8%',
       changeType: 'increase',
       icon: MessageSquare,
@@ -78,7 +37,7 @@ const Dashboard = () => {
   ];
 
   // Get the most recent campaigns (limit to 5)
-  const recentCampaigns = loading ? [] : campaigns
+  const recentCampaigns = campaigns
     .sort((a, b) => new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime())
     .slice(0, 5)
     .map(campaign => ({
