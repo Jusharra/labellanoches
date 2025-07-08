@@ -18,7 +18,7 @@ interface Contact {
   last_contact?: string;
 }
 
-const Contacts = () => {
+const Contacts: React.FC = () => {
   const { supabase, isLoading: supabaseLoading, isAuthenticated } = useSupabase();
   const location = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
