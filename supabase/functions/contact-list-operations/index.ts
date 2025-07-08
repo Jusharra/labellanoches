@@ -17,148 +17,92 @@ interface SuccessResponse<T = any> {
   data: T;
 }
 
+/**
+ * Helper function to create a Supabase client with user authentication
+ */
+function getUserSupabaseClient(authHeader: string, supabaseUrl: string, anonKey: string) {
+  return createClient(supabaseUrl, anonKey, {
+    global: {
+      headers: {
+        Authorization: authHeader
+      }
+    }
+  })
+}
+
+/**
+ * Helper function to validate authentication and get user info
+ */
+async function validateAuth(req: Request, supabaseUrl: string, serviceRoleKey: string, anonKey: string) {
+  const authHeader = req.headers.get('Authorization')
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return {
+      error: {
+        success: false,
+        error: 'Authentication required. Please sign in.',
+        status: 401
+      }
+    }
+  }
+
+  const userToken = authHeader.replace('Bearer ', '')
+  const userSupabase = getUserSupabaseClient(authHeader, supabaseUrl, anonKey)
+  
+  // Get the authenticated user's information
+  const { data: { user }, error: userError } = await userSupabase.auth.getUser(userToken)
+  
+  if (userError || !user) {
+    console.error('Error getting authenticated user:', userError)
+    return {
+      error: {
+        success: false,
+        error: 'Invalid authentication token. Please sign in again.',
+        status: 401
+      }
+    }
+  }
+
+  // Create service role client for admin operations
+  const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
+  
+  // Check user permissions using service role client
+  const { data: userProfile, error: profileError } = await serviceSupabase
+    .from('user_profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (profileError || !userProfile) {
+    console.error('Error fetching user profile:', profileError)
+    return {
+      error: {
+        success: false,
+        error: 'Unable to verify user permissions.',
+        status: 403
+      }
+    }
+  }
+
+  return {
+    user,
+    userProfile,
+    userSupabase,
+    serviceSupabase: serviceSupabase,
+    authHeader
+  }
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
-    // PUT /contact-list-operations/lists/:id - Update contact list
-    if (req.method === 'PUT' && pathname.includes('/lists/') && !pathname.includes('/update-membership/')) {
-      const listId = pathname.split('/').pop()
-      
-      let requestData
-      
-      try {
-        const requestText = await req.text()
-        requestData = JSON.parse(requestText)
-      } catch (parseError) {
-        const errorResponse: ErrorResponse = {
-          success: false,
-          error: 'Invalid JSON in request body'
-        }
-        
-        return new Response(
-          JSON.stringify(errorResponse),
-          { 
-            status: 400, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        )
-      }
-
-      const updateData = {
-        list_name: requestData.name,
-        description: requestData.description || null
-      }
-
-      const { data: updatedList, error } = await supabase
-        .from('contact_lists')
-        .update(updateData)
-        .eq('id', listId)
-        .select()
-        .single()
-
-      if (error) {
-        console.error('Error updating contact list:', error)
-        const errorResponse: ErrorResponse = {
-          success: false,
-          error: `Failed to update contact list: ${error.message}`,
-          details: error
-        }
-        
-        return new Response(
-          JSON.stringify(errorResponse),
-          { 
-            status: 500, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        )
-      }
-
-      const successResponse: SuccessResponse = {
-        success: true,
-        data: {
-          id: updatedList.id,
-          name: updatedList.list_name,
-          description: updatedList.description,
-          contactCount: 0, // Would need a separate query to get current count
-          createdDate: new Date(updatedList.created_at).toISOString().split('T')[0]
-        }
-      }
-
-      return new Response(
-        JSON.stringify(successResponse),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // DELETE /contact-list-operations/lists/:id - Delete contact list
-    if (req.method === 'DELETE' && pathname.includes('/lists/')) {
-      const listId = pathname.split('/').pop()
-
-      // First, remove all members from the list
-      const { error: membersError } = await supabase
-        .from('contact_list_members')
-        .delete()
-        .eq('contact_list_id', listId)
-
-      if (membersError) {
-        console.error('Error removing list members:', membersError)
-        const errorResponse: ErrorResponse = {
-          success: false,
-          error: `Failed to remove list members: ${membersError.message}`,
-          details: membersError
-        }
-        
-        return new Response(
-          JSON.stringify(errorResponse),
-          { 
-            status: 500, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        )
-      }
-
-      // Then delete the list itself
-      const { error: listError } = await supabase
-        .from('contact_lists')
-        .delete()
-        .eq('id', listId)
-
-      if (listError) {
-        console.error('Error deleting contact list:', listError)
-        const errorResponse: ErrorResponse = {
-          success: false,
-          error: `Failed to delete contact list: ${listError.message}`,
-          details: listError
-        }
-        
-        return new Response(
-          JSON.stringify(errorResponse),
-          { 
-            status: 500, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        )
-      }
-
-      const successResponse: SuccessResponse = {
-        success: true,
-        data: { message: 'Contact list deleted successfully' }
-      }
-
-      return new Response(
-        JSON.stringify(successResponse),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
   try {
-    // Initialize Supabase client
+    // Initialize Supabase clients
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
 
     const url = new URL(req.url)
     const pathname = url.pathname
@@ -168,9 +112,23 @@ Deno.serve(async (req) => {
 
     // GET /contact-list-operations/members/:listId - Get members of a specific list
     if (req.method === 'GET' && pathname.includes('/members/')) {
+      const authResult = await validateAuth(req, supabaseUrl, supabaseServiceKey, anonKey)
+      
+      if (authResult.error) {
+        return new Response(
+          JSON.stringify(authResult.error),
+          { 
+            status: authResult.error.status, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+
+      const { userSupabase } = authResult
       const listId = pathname.split('/').pop()
 
-      const { data: members, error } = await supabase
+      // Use userSupabase for RLS compliance
+      const { data: members, error } = await userSupabase
         .from('contact_list_members')
         .select(`
           contact_id,
@@ -228,6 +186,20 @@ Deno.serve(async (req) => {
 
     // POST /contact-list-operations/add-members - Add contacts to lists
     if (req.method === 'POST' && pathname.endsWith('/add-members')) {
+      const authResult = await validateAuth(req, supabaseUrl, supabaseServiceKey, anonKey)
+      
+      if (authResult.error) {
+        return new Response(
+          JSON.stringify(authResult.error),
+          { 
+            status: authResult.error.status, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+
+      const { userSupabase } = authResult
+
       let requestData
       
       try {
@@ -276,8 +248,8 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Use upsert to avoid conflicts with existing memberships
-      const { data: insertedMemberships, error } = await supabase
+      // Use userSupabase for RLS compliance with upsert to avoid conflicts
+      const { data: insertedMemberships, error } = await userSupabase
         .from('contact_list_members')
         .upsert(memberships, { 
           onConflict: 'contact_list_id,contact_id',
@@ -318,6 +290,20 @@ Deno.serve(async (req) => {
 
     // DELETE /contact-list-operations/remove-members - Remove contacts from lists
     if (req.method === 'DELETE' && pathname.endsWith('/remove-members')) {
+      const authResult = await validateAuth(req, supabaseUrl, supabaseServiceKey, anonKey)
+      
+      if (authResult.error) {
+        return new Response(
+          JSON.stringify(authResult.error),
+          { 
+            status: authResult.error.status, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+
+      const { userSupabase } = authResult
+
       let requestData
       
       try {
@@ -355,7 +341,8 @@ Deno.serve(async (req) => {
         )
       }
 
-      const { error } = await supabase
+      // Use userSupabase for RLS compliance
+      const { error } = await userSupabase
         .from('contact_list_members')
         .delete()
         .eq('contact_list_id', listId)
@@ -393,6 +380,19 @@ Deno.serve(async (req) => {
 
     // PUT /contact-list-operations/update-membership/:listId - Update membership for entire list
     if (req.method === 'PUT' && pathname.includes('/update-membership/')) {
+      const authResult = await validateAuth(req, supabaseUrl, supabaseServiceKey, anonKey)
+      
+      if (authResult.error) {
+        return new Response(
+          JSON.stringify(authResult.error),
+          { 
+            status: authResult.error.status, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+
+      const { userSupabase } = authResult
       const listId = pathname.split('/').pop()
       
       let requestData
@@ -432,8 +432,8 @@ Deno.serve(async (req) => {
         )
       }
 
-      // Get current membership for this list
-      const { data: currentMembers, error: fetchError } = await supabase
+      // Get current membership for this list using userSupabase
+      const { data: currentMembers, error: fetchError } = await userSupabase
         .from('contact_list_members')
         .select('contact_id')
         .eq('contact_list_id', listId)
@@ -474,14 +474,14 @@ Deno.serve(async (req) => {
       let addedCount = 0
       let removedCount = 0
 
-      // Add new members
+      // Add new members using userSupabase
       if (contactsToAdd.length > 0) {
         const membershipsToAdd = contactsToAdd.map(contactId => ({
           contact_id: contactId,
           contact_list_id: listId
         }))
 
-        const { error: addError } = await supabase
+        const { error: addError } = await userSupabase
           .from('contact_list_members')
           .insert(membershipsToAdd)
 
@@ -505,9 +505,9 @@ Deno.serve(async (req) => {
         addedCount = contactsToAdd.length
       }
 
-      // Remove members
+      // Remove members using userSupabase
       if (contactsToRemove.length > 0) {
-        const { error: removeError } = await supabase
+        const { error: removeError } = await userSupabase
           .from('contact_list_members')
           .delete()
           .eq('contact_list_id', listId)
@@ -551,9 +551,23 @@ Deno.serve(async (req) => {
 
     // GET /contact-list-operations/lists - Get all contact lists with member counts
     if (req.method === 'GET' && pathname.endsWith('/lists')) {
+      const authResult = await validateAuth(req, supabaseUrl, supabaseServiceKey, anonKey)
+      
+      if (authResult.error) {
+        return new Response(
+          JSON.stringify(authResult.error),
+          { 
+            status: authResult.error.status, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+
+      const { userSupabase } = authResult
       const businessId = searchParams.get('business_id')
 
-      let query = supabase
+      // Use userSupabase for RLS compliance
+      let query = userSupabase
         .from('contact_lists')
         .select(`
           id,
@@ -608,6 +622,20 @@ Deno.serve(async (req) => {
 
     // POST /contact-list-operations/lists - Create new contact list
     if (req.method === 'POST' && pathname.endsWith('/lists')) {
+      const authResult = await validateAuth(req, supabaseUrl, supabaseServiceKey, anonKey)
+      
+      if (authResult.error) {
+        return new Response(
+          JSON.stringify(authResult.error),
+          { 
+            status: authResult.error.status, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+
+      const { userSupabase, serviceSupabase } = authResult
+
       let requestData
       
       try {
@@ -628,8 +656,8 @@ Deno.serve(async (req) => {
         )
       }
 
-      // Get the default business ID (Bella Vista)
-      const { data: business, error: businessError } = await supabase
+      // Get the default business ID (Bella Vista) using service role client
+      const { data: business, error: businessError } = await serviceSupabase
         .from('businesses')
         .select('id')
         .eq('name', 'La Bella Noches')
@@ -656,7 +684,8 @@ Deno.serve(async (req) => {
         description: requestData.description || null
       }
 
-      const { data: newList, error } = await supabase
+      // Use userSupabase for RLS compliance
+      const { data: newList, error } = await userSupabase
         .from('contact_lists')
         .insert(listData)
         .select()
@@ -688,6 +717,164 @@ Deno.serve(async (req) => {
           contactCount: 0,
           createdDate: new Date(newList.created_at).toISOString().split('T')[0]
         }
+      }
+
+      return new Response(
+        JSON.stringify(successResponse),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // PUT /contact-list-operations/lists/:id - Update contact list
+    if (req.method === 'PUT' && pathname.includes('/lists/') && !pathname.includes('/update-membership/')) {
+      const authResult = await validateAuth(req, supabaseUrl, supabaseServiceKey, anonKey)
+      
+      if (authResult.error) {
+        return new Response(
+          JSON.stringify(authResult.error),
+          { 
+            status: authResult.error.status, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+
+      const { userSupabase } = authResult
+      const listId = pathname.split('/').pop()
+      
+      let requestData
+      
+      try {
+        const requestText = await req.text()
+        requestData = JSON.parse(requestText)
+      } catch (parseError) {
+        const errorResponse: ErrorResponse = {
+          success: false,
+          error: 'Invalid JSON in request body'
+        }
+        
+        return new Response(
+          JSON.stringify(errorResponse),
+          { 
+            status: 400, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+
+      const updateData = {
+        list_name: requestData.name,
+        description: requestData.description || null
+      }
+
+      // Use userSupabase for RLS compliance
+      const { data: updatedList, error } = await userSupabase
+        .from('contact_lists')
+        .update(updateData)
+        .eq('id', listId)
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Error updating contact list:', error)
+        const errorResponse: ErrorResponse = {
+          success: false,
+          error: `Failed to update contact list: ${error.message}`,
+          details: error
+        }
+        
+        return new Response(
+          JSON.stringify(errorResponse),
+          { 
+            status: 500, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+
+      const successResponse: SuccessResponse = {
+        success: true,
+        data: {
+          id: updatedList.id,
+          name: updatedList.list_name,
+          description: updatedList.description,
+          contactCount: 0, // Would need a separate query to get current count
+          createdDate: new Date(updatedList.created_at).toISOString().split('T')[0]
+        }
+      }
+
+      return new Response(
+        JSON.stringify(successResponse),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // DELETE /contact-list-operations/lists/:id - Delete contact list
+    if (req.method === 'DELETE' && pathname.includes('/lists/')) {
+      const authResult = await validateAuth(req, supabaseUrl, supabaseServiceKey, anonKey)
+      
+      if (authResult.error) {
+        return new Response(
+          JSON.stringify(authResult.error),
+          { 
+            status: authResult.error.status, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+
+      const { userSupabase } = authResult
+      const listId = pathname.split('/').pop()
+
+      // First, remove all members from the list using userSupabase
+      const { error: membersError } = await userSupabase
+        .from('contact_list_members')
+        .delete()
+        .eq('contact_list_id', listId)
+
+      if (membersError) {
+        console.error('Error removing list members:', membersError)
+        const errorResponse: ErrorResponse = {
+          success: false,
+          error: `Failed to remove list members: ${membersError.message}`,
+          details: membersError
+        }
+        
+        return new Response(
+          JSON.stringify(errorResponse),
+          { 
+            status: 500, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+
+      // Then delete the list itself using userSupabase
+      const { error: listError } = await userSupabase
+        .from('contact_lists')
+        .delete()
+        .eq('id', listId)
+
+      if (listError) {
+        console.error('Error deleting contact list:', listError)
+        const errorResponse: ErrorResponse = {
+          success: false,
+          error: `Failed to delete contact list: ${listError.message}`,
+          details: listError
+        }
+        
+        return new Response(
+          JSON.stringify(errorResponse),
+          { 
+            status: 500, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+
+      const successResponse: SuccessResponse = {
+        success: true,
+        data: { message: 'Contact list deleted successfully' }
       }
 
       return new Response(

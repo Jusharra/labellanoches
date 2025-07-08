@@ -17,6 +17,81 @@ interface SuccessResponse<T = any> {
   data: T;
 }
 
+/**
+ * Helper function to create a Supabase client with user authentication
+ */
+function getUserSupabaseClient(authHeader: string, supabaseUrl: string, anonKey: string) {
+  return createClient(supabaseUrl, anonKey, {
+    global: {
+      headers: {
+        Authorization: authHeader
+      }
+    }
+  })
+}
+
+/**
+ * Helper function to validate authentication and get user info
+ */
+async function validateAuth(req: Request, supabaseUrl: string, serviceRoleKey: string, anonKey: string) {
+  const authHeader = req.headers.get('Authorization')
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return {
+      error: {
+        success: false,
+        error: 'Authentication required. Please sign in.',
+        status: 401
+      }
+    }
+  }
+
+  const userToken = authHeader.replace('Bearer ', '')
+  const userSupabase = getUserSupabaseClient(authHeader, supabaseUrl, anonKey)
+  
+  // Get the authenticated user's information
+  const { data: { user }, error: userError } = await userSupabase.auth.getUser(userToken)
+  
+  if (userError || !user) {
+    console.error('Error getting authenticated user:', userError)
+    return {
+      error: {
+        success: false,
+        error: 'Invalid authentication token. Please sign in again.',
+        status: 401
+      }
+    }
+  }
+
+  // Create service role client for admin operations
+  const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
+  
+  // Check user permissions using service role client
+  const { data: userProfile, error: profileError } = await serviceSupabase
+    .from('user_profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (profileError || !userProfile) {
+    console.error('Error fetching user profile:', profileError)
+    return {
+      error: {
+        success: false,
+        error: 'Unable to verify user permissions.',
+        status: 403
+      }
+    }
+  }
+
+  return {
+    user,
+    userProfile,
+    userSupabase,
+    serviceSupabase: serviceSupabase,
+    authHeader
+  }
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -24,10 +99,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Initialize Supabase client
+    // Initialize Supabase clients
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
 
     const url = new URL(req.url)
     const pathname = url.pathname
@@ -37,9 +112,24 @@ Deno.serve(async (req) => {
 
     // GET /campaign-operations/campaigns - Get all campaigns
     if (req.method === 'GET' && pathname.endsWith('/campaigns')) {
+      const authResult = await validateAuth(req, supabaseUrl, supabaseServiceKey, anonKey)
+      
+      if (authResult.error) {
+        return new Response(
+          JSON.stringify(authResult.error),
+          { 
+            status: authResult.error.status, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+
+      const { userSupabase, serviceSupabase, userProfile } = authResult
+
+      // Use userSupabase for RLS-compliant queries
       const businessId = searchParams.get('business_id')
 
-      let query = supabase
+      let query = userSupabase
         .from('campaigns')
         .select('*')
 
@@ -77,10 +167,10 @@ Deno.serve(async (req) => {
         }
       });
 
-      // Fetch contact list names for all unique list IDs
+      // Fetch contact list names for all unique list IDs using service role client
       let listNamesMap: Map<string, string> = new Map();
       if (allListIds.size > 0) {
-        const { data: contactLists, error: listsError } = await supabase
+        const { data: contactLists, error: listsError } = await serviceSupabase
           .from('contact_lists')
           .select('id, list_name')
           .in('id', Array.from(allListIds));
@@ -95,10 +185,10 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Fetch actual sent counts from campaign_logs table
+      // Fetch actual sent counts from campaign_logs table using service role client
       let sentCountsMap: Map<string, number> = new Map();
       if (campaignIds.length > 0) {
-        const { data: campaignLogs, error: logsError } = await supabase
+        const { data: campaignLogs, error: logsError } = await serviceSupabase
           .from('campaign_logs')
           .select('campaign_id')
           .in('campaign_id', campaignIds)
@@ -189,63 +279,22 @@ Deno.serve(async (req) => {
 
     // POST /campaign-operations/campaigns - Create new campaign
     if (req.method === 'POST' && pathname.endsWith('/campaigns')) {
-      // Extract the user's authorization token from request headers
-      const authHeader = req.headers.get('Authorization')
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        console.error('Missing or invalid Authorization header')
-        const errorResponse: ErrorResponse = {
-          success: false,
-          error: 'Authentication required. Please sign in to create campaigns.'
-        }
-        
+      const authResult = await validateAuth(req, supabaseUrl, supabaseServiceKey, anonKey)
+      
+      if (authResult.error) {
         return new Response(
-          JSON.stringify(errorResponse),
+          JSON.stringify(authResult.error),
           { 
-            status: 401, 
+            status: authResult.error.status, 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
           }
         )
       }
 
-      const userToken = authHeader.replace('Bearer ', '')
-      
-      // Create a new Supabase client using the user's token for RLS compliance
-      const userSupabase = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
-        global: {
-          headers: {
-            Authorization: authHeader
-          }
-        }
-      })
-
-      // Get the authenticated user's information
-      const { data: { user }, error: userError } = await userSupabase.auth.getUser(userToken)
-      
-      if (userError || !user) {
-        console.error('Error getting authenticated user:', userError)
-        const errorResponse: ErrorResponse = {
-          success: false,
-          error: 'Invalid authentication token. Please sign in again.'
-        }
-        
-        return new Response(
-          JSON.stringify(errorResponse),
-          { 
-            status: 401, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        )
-      }
+      const { user, userSupabase, serviceSupabase, userProfile } = authResult
 
       // Verify user has admin permissions
-      const { data: userProfile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single()
-
-      if (profileError || !userProfile || userProfile.role !== 'admin') {
-        console.error('User does not have admin permissions:', profileError)
+      if (userProfile.role !== 'admin') {
         const errorResponse: ErrorResponse = {
           success: false,
           error: 'Admin permissions required to create campaigns.'
@@ -285,8 +334,8 @@ Deno.serve(async (req) => {
         )
       }
 
-      // Get the Bella Vista business ID
-      const { data: business, error: businessError } = await supabase
+      // Get the Bella Vista business ID using service role client
+      const { data: business, error: businessError } = await serviceSupabase
         .from('businesses')
         .select('id, webhook_url, twilio_number')
         .eq('name', 'La Bella Noches')
@@ -365,7 +414,7 @@ Deno.serve(async (req) => {
         )
       }
 
-      // Fetch list names for the new campaign
+      // Fetch list names for the new campaign using service role client
       let targetLists = []
       try {
         targetLists = newCampaign.target_contact_lists ? 
@@ -380,7 +429,7 @@ Deno.serve(async (req) => {
 
       let listNamesMap: Map<string, string> = new Map();
       if (targetLists.length > 0) {
-        const { data: contactLists, error: listsError } = await supabase
+        const { data: contactLists, error: listsError } = await serviceSupabase
           .from('contact_lists')
           .select('id, list_name')
           .in('id', targetLists);
@@ -445,6 +494,20 @@ Deno.serve(async (req) => {
 
     // PUT /campaign-operations/campaigns/:id - Update campaign
     if (req.method === 'PUT' && pathname.includes('/campaigns/')) {
+      const authResult = await validateAuth(req, supabaseUrl, supabaseServiceKey, anonKey)
+      
+      if (authResult.error) {
+        return new Response(
+          JSON.stringify(authResult.error),
+          { 
+            status: authResult.error.status, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+
+      const { userSupabase, serviceSupabase, userProfile } = authResult
+
       const campaignId = pathname.split('/').pop()
       
       let updateData
@@ -510,7 +573,7 @@ Deno.serve(async (req) => {
 
       // Always ensure webhook_url is synced with business settings when updating
       // First, fetch the campaign's business_id and the business's current webhook_url
-      const { data: campaignWithBusiness, error: fetchError } = await supabase
+      const { data: campaignWithBusiness, error: fetchError } = await serviceSupabase
         .from('campaigns')
         .select(`
           business_id,
@@ -534,7 +597,8 @@ Deno.serve(async (req) => {
         campaignUpdateData.scheduled_time = null
       }
 
-      const { data: updatedCampaign, error } = await supabase
+      // Use userSupabase for RLS compliance
+      const { data: updatedCampaign, error } = await userSupabase
         .from('campaigns')
         .update(campaignUpdateData)
         .eq('id', campaignId)
@@ -558,7 +622,7 @@ Deno.serve(async (req) => {
         )
       }
 
-      // Fetch list names for the updated campaign
+      // Fetch list names for the updated campaign using service role client
       let targetLists = []
       try {
         targetLists = updatedCampaign.target_contact_lists ? 
@@ -573,7 +637,7 @@ Deno.serve(async (req) => {
 
       let listNamesMap: Map<string, string> = new Map();
       if (targetLists.length > 0) {
-        const { data: contactLists, error: listsError } = await supabase
+        const { data: contactLists, error: listsError } = await serviceSupabase
           .from('contact_lists')
           .select('id, list_name')
           .in('id', targetLists);
@@ -636,9 +700,24 @@ Deno.serve(async (req) => {
 
     // DELETE /campaign-operations/campaigns/:id - Delete campaign
     if (req.method === 'DELETE' && pathname.includes('/campaigns/')) {
+      const authResult = await validateAuth(req, supabaseUrl, supabaseServiceKey, anonKey)
+      
+      if (authResult.error) {
+        return new Response(
+          JSON.stringify(authResult.error),
+          { 
+            status: authResult.error.status, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+
+      const { userSupabase, userProfile } = authResult
+
       const campaignId = pathname.split('/').pop()
 
-      const { error } = await supabase
+      // Use userSupabase for RLS compliance
+      const { error } = await userSupabase
         .from('campaigns')
         .delete()
         .eq('id', campaignId)
