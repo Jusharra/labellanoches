@@ -294,7 +294,7 @@ async function handleCreateCampaign(supabase: any, campaignData: any, req: Reque
     campaign_type: campaignData.campaignType || 'Regular Campaign',
     media_url: campaignData.mediaUrl && campaignData.mediaUrl.trim() !== '' ? campaignData.mediaUrl : null,
     target_contact_lists: campaignData.selectedLists || [],
-    webhook_url: businessData.webhook_url || ''
+    webhook_url: businessData.webhook_url || null
   }
 
   const { data: newCampaign, error } = await supabase
