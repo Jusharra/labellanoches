@@ -48,7 +48,7 @@ const Settings = () => {
         .eq('name', 'La Bella Noches')
         .maybeSingle();
       
-      if (error) {
+      if (error && !(error.code === 'PGRST116' && !business)) {
         console.error('Error fetching business settings:', error);
         toast.error('Failed to load business settings');
         return;
