@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { useAuth } from '@clerk/clerk-react';
+import { SupabaseClient, User, Session } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabaseClient';
 
 interface SupabaseContextType {
-  supabase: SupabaseClient | null;
+  supabase: SupabaseClient;
+  user: User | null;
+  session: Session | null;
   isLoading: boolean;
   isAuthenticated: boolean;
 }
@@ -23,106 +25,76 @@ interface SupabaseProviderProps {
 }
 
 export const SupabaseProvider: React.FC<SupabaseProviderProps> = ({ children }) => {
-  const { getToken, isLoaded, userId } = useAuth();
-  const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const initializeSupabase = async () => {
+    console.log('🔐 Initializing Supabase auth...');
+    
+    // Get initial session
+    const getInitialSession = async () => {
       try {
-        setIsLoading(true);
+        const { data: { session }, error } = await supabase.auth.getSession();
         
-        // Wait for Clerk to load
-        if (!isLoaded) {
-          return;
-        }
-
-        // Initialize Supabase client
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-        if (!supabaseUrl || !supabaseAnonKey) {
-          console.error('Missing Supabase environment variables');
-          return;
-        }
-
-        const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
-
-        // If user is authenticated in Clerk, get the session token
-        if (userId) {
-          try {
-            console.log('🔐 User authenticated in Clerk, getting session token...');
-            
-            // Get token using the configured 'supabase' JWT template
-            const token = await getToken({ template: 'supabase' });
-            
-            if (token) {
-              console.log('✅ Got Clerk session token, setting in Supabase client');
-              
-              // Set the session token in the Supabase client
-              await supabaseClient.auth.setSession({
-                access_token: token,
-                refresh_token: '', // Not needed for Clerk integration
-              });
-              
-              console.log('✅ Supabase client authenticated with Clerk token');
-            } else {
-              console.warn('⚠️ No session token available from Clerk');
-            }
-          } catch (error) {
-            console.error('❌ Error getting Clerk session token:', error);
-            if (error.message && error.message.includes('JWT template not found')) {
-              console.error('💡 Make sure you have configured the "supabase" JWT template in Clerk Dashboard');
-              console.error('💡 Template should include: {"role": "{{user.public_metadata.role}}", "email": "{{user.primary_email_address}}"}');
-            }
-          }
+        if (error) {
+          console.error('❌ Error getting initial session:', error);
         } else {
-          console.log('👤 No user authenticated in Clerk');
+          console.log('✅ Initial session loaded:', session ? 'authenticated' : 'not authenticated');
+          setSession(session);
+          setUser(session?.user ?? null);
         }
-
-        setSupabase(supabaseClient);
       } catch (error) {
-        console.error('❌ Error initializing Supabase:', error);
+        console.error('❌ Error in getInitialSession:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    initializeSupabase();
-  }, [isLoaded, userId, getToken]);
+    getInitialSession();
 
-  // Update the token when it changes
-  useEffect(() => {
-    if (!supabase || !userId || !isLoaded) return;
-
-    const updateToken = async () => {
-      try {
-        // Get token using the configured 'supabase' JWT template
-        const token = await getToken({ template: 'supabase' });
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('🔄 Auth state changed:', event, session ? 'authenticated' : 'not authenticated');
         
-        if (token) {
-          await supabase.auth.setSession({
-            access_token: token,
-            refresh_token: '',
-          });
-        }
-      } catch (error) {
-        console.error('❌ Error updating Supabase token:', error);
-        if (error.message && error.message.includes('JWT template not found')) {
-          console.error('💡 Make sure you have configured the "supabase" JWT template in Clerk Dashboard');
+        setSession(session);
+        setUser(session?.user ?? null);
+        setIsLoading(false);
+
+        // Handle specific auth events
+        switch (event) {
+          case 'SIGNED_IN':
+            console.log('✅ User signed in:', session?.user?.email);
+            break;
+          case 'SIGNED_OUT':
+            console.log('👋 User signed out');
+            break;
+          case 'TOKEN_REFRESHED':
+            console.log('🔄 Token refreshed');
+            break;
+          case 'USER_UPDATED':
+            console.log('👤 User updated');
+            break;
+          case 'PASSWORD_RECOVERY':
+            console.log('🔐 Password recovery initiated');
+            break;
         }
       }
-    };
+    );
 
-    // Update token every 30 seconds to keep it fresh
-    const interval = setInterval(updateToken, 30000);
-    return () => clearInterval(interval);
-  }, [supabase, userId, isLoaded, getToken]);
+    // Cleanup subscription on unmount
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const value: SupabaseContextType = {
     supabase,
+    user,
+    session,
     isLoading,
-    isAuthenticated: !!userId && !!supabase
+    isAuthenticated: !!user && !!session
   };
 
   return (

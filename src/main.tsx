@@ -1,27 +1,18 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ClerkProvider } from '@clerk/clerk-react';
 import { Toaster } from 'react-hot-toast';
 import { SupabaseProvider } from './context/SupabaseContext';
+import { AuthProvider } from './context/AuthContext';
 import App from './App.tsx';
 import './index.css';
 
-const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-if (!PUBLISHABLE_KEY) {
-  throw new Error("Missing Clerk Publishable Key");
-}
-
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ClerkProvider 
-      publishableKey={PUBLISHABLE_KEY} 
-      afterSignOutUrl="/"
-      signInUrl="/sign-in"
-      signUpUrl="/sign-up"
-    >
-      <SupabaseProvider>
+    <SupabaseProvider>
+      <AuthProvider>
         <App />
-      </SupabaseProvider>
+      </AuthProvider>
+    </SupabaseProvider>
       <Toaster
         position="top-right"
         toastOptions={{
@@ -80,6 +71,5 @@ createRoot(document.getElementById('root')!).render(
           },
         }}
       />
-    </ClerkProvider>
   </StrictMode>
 );
