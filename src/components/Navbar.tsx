@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ChefHat, Menu, X, Moon, Sun } from 'lucide-react';
-import { SignedIn, SignedOut, UserButton, useUser } from '@clerk/clerk-react';
+import { ChefHat, Menu, X, Moon, Sun, User, LogOut } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
@@ -12,10 +12,10 @@ const Navbar = () => {
     return false;
   });
   const location = useLocation();
-  const { user } = useUser();
+  const { user, isAuthenticated, signOut } = useAuth();
 
   // Check if user is admin
-  const isAdmin = user?.publicMetadata?.role === 'admin';
+  const isAdmin = user?.user_metadata?.role === 'admin';
 
   const toggleDarkMode = () => {
     const newDarkMode = !isDark;
@@ -54,6 +54,10 @@ const Navbar = () => {
     : baseNavigation;
 
   const isActive = (path: string) => location.pathname === path;
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
 
   return (
     <nav className="bg-white dark:bg-gray-800 shadow-lg sticky top-0 z-50 transition-colors">
@@ -95,17 +99,30 @@ const Navbar = () => {
               </button>
               
               {/* Auth Buttons */}
-              <SignedOut>
+              {isAuthenticated ? (
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <User className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+                    <span className="text-sm text-gray-600 dark:text-gray-300">
+                      {user?.email}
+                    </span>
+                  </div>
+                  <button
+                    onClick={handleSignOut}
+                    className="flex items-center space-x-1 px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-red-600 transition-colors"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              ) : (
                 <Link
                   to="/sign-in"
                   className="bg-primary text-white px-4 py-2 rounded-lg font-semibold hover:bg-primary/90 transition-colors"
                 >
                   Sign In
                 </Link>
-              </SignedOut>
-              <SignedIn>
-                <UserButton afterSignOutUrl="/" />
-              </SignedIn>
+              )}
             </div>
           </div>
 
@@ -151,7 +168,21 @@ const Navbar = () => {
             
             {/* Mobile Auth */}
             <div className="px-3 py-2">
-              <SignedOut>
+              {isAuthenticated ? (
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2 text-gray-600 dark:text-gray-300">
+                    <User className="h-4 w-4" />
+                    <span className="text-sm">{user?.email}</span>
+                  </div>
+                  <button
+                    onClick={handleSignOut}
+                    className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              ) : (
                 <Link
                   to="/sign-in"
                   className="block w-full bg-primary text-white px-4 py-2 rounded-lg font-semibold hover:bg-primary/90 transition-colors text-center"
@@ -159,12 +190,7 @@ const Navbar = () => {
                 >
                   Sign In
                 </Link>
-              </SignedOut>
-              <SignedIn>
-                <div className="flex justify-center">
-                  <UserButton afterSignOutUrl="/" />
-                </div>
-              </SignedIn>
+              )}
             </div>
           </div>
         </div>

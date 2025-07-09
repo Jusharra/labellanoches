@@ -10,9 +10,11 @@ import {
   Settings,
   Menu,
   X,
-  ChefHat
+  ChefHat,
+  User,
+  LogOut
 } from 'lucide-react';
-import { UserButton } from '@clerk/clerk-react';
+import { useAuth } from '../context/AuthContext';
 
 // Template context for sharing templates between admin components
 interface Template {
@@ -47,6 +49,7 @@ export const useTemplates = () => {
 const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+  const { user, signOut } = useAuth();
   
   // Shared template state
   const [templates, setTemplates] = useState<Template[]>([
@@ -264,7 +267,19 @@ const AdminLayout = () => {
         <div className="absolute bottom-4 left-4 right-4">
           <div className="flex items-center justify-between p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
             <span className="text-sm text-gray-600 dark:text-gray-300">Admin Panel</span>
-            <UserButton afterSignOutUrl="/" />
+            <div className="flex items-center space-x-2">
+              <User className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+              <span className="text-sm text-gray-600 dark:text-gray-300">
+                {user?.email || 'Admin'}
+              </span>
+              <button
+                onClick={signOut}
+                className="p-1 text-gray-600 dark:text-gray-300 hover:text-red-600 transition-colors"
+                title="Sign Out"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -279,7 +294,16 @@ const AdminLayout = () => {
           >
             <Menu className="h-6 w-6" />
           </button>
-          <UserButton afterSignOutUrl="/" />
+          <div className="flex items-center space-x-2">
+            <User className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+            <button
+              onClick={signOut}
+              className="p-1 text-gray-600 dark:text-gray-300 hover:text-red-600 transition-colors"
+              title="Sign Out"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         {/* Page content */}

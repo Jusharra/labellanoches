@@ -1,6 +1,5 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react';
 import AdminProtectedRoute from './components/AdminProtectedRoute';
 import AdminLayout from './components/AdminLayout';
 import Layout from './components/Layout';

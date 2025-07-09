@@ -1,16 +1,16 @@
 import React from 'react';
-import { useUser } from '@clerk/clerk-react';
 import { Navigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 interface AdminProtectedRouteProps {
   children: React.ReactNode;
 }
 
 const AdminProtectedRoute: React.FC<AdminProtectedRouteProps> = ({ children }) => {
-  const { user, isLoaded } = useUser();
+  const { user, isLoading, isAuthenticated } = useAuth();
 
-  // Show loading while Clerk is initializing
-  if (!isLoaded) {
+  // Show loading while auth is initializing
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
@@ -19,9 +19,9 @@ const AdminProtectedRoute: React.FC<AdminProtectedRouteProps> = ({ children }) =
   }
 
   // Check if user is signed in and has admin role
-  const isAdmin = user?.publicMetadata?.role === 'admin';
+  const isAdmin = user?.user_metadata?.role === 'admin';
 
-  if (!user) {
+  if (!isAuthenticated) {
     return <Navigate to="/sign-in" replace />;
   }
 
