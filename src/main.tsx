@@ -1,18 +1,32 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Toaster } from 'react-hot-toast';
+import { ClerkProvider } from '@clerk/clerk-react';
 import { SupabaseProvider } from './context/SupabaseContext';
 import { AuthProvider } from './context/AuthContext';
 import App from './App.tsx';
 import './index.css';
 
+const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+
+if (!clerkPubKey) {
+  throw new Error("Missing Clerk Publishable Key");
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <SupabaseProvider>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
-    </SupabaseProvider>
+    <ClerkProvider 
+      publishableKey={clerkPubKey}
+      routerSignInUrl={import.meta.env.CLERK_SIGN_IN_URL || '/sign-in'}
+      routerSignInForceRedirectUrl={import.meta.env.CLERK_SIGN_IN_FALLBACK_REDIRECT_URL || '/admin/dashboard'}
+      routerSignUpForceRedirectUrl={import.meta.env.CLERK_SIGN_UP_FALLBACK_REDIRECT_URL || '/admin/dashboard'}
+    >
+      <SupabaseProvider>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </SupabaseProvider>
+    </ClerkProvider>
       <Toaster
         position="top-right"
         toastOptions={{
