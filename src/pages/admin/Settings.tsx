@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { Save, MapPin, Clock, Globe, Webhook } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useSupabase } from '../../context/SupabaseContext';
 
 const Settings = () => {
+  const { supabase, isAuthenticated } = useSupabase();
+  
   const [settings, setSettings] = useState({
     businessName: 'La Bella Noches',
     address: '123 Gourmet Street, Foodie District',
@@ -27,25 +30,22 @@ const Settings = () => {
 
   // Load business settings on component mount
   React.useEffect(() => {
-    loadBusinessSettings();
-  }, []);
+    if (supabase && isAuthenticated) {
+      loadBusinessSettings();
+    }
+  }, [supabase, isAuthenticated]);
 
   const loadBusinessSettings = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/business-operations/settings`, {
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json'
-        }
+      const { data, error } = await supabase.functions.invoke('business-operations', {
+        body: { action: 'get-settings' }
       });
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (error) {
+        throw new Error(error.message);
       }
       
-      const data = await response.json();
-      
-      if (data?.success) {
+      if (data?.success && data.data) {
         const business = data.data;
         setSettings(prev => ({
           ...prev,
@@ -70,20 +70,13 @@ const Settings = () => {
     setLoading(true);
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/business-operations/settings`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(settings)
+      const { data, error } = await supabase.functions.invoke('business-operations', {
+        body: { action: 'update-settings', settings }
       });
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (error) {
+        throw new Error(error.message);
       }
-      
-      const data = await response.json();
       
       if (data?.success) {
         console.log('Settings saved successfully:', data.data);
