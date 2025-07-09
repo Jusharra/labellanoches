@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { Save, MapPin, Clock, Globe, Webhook } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useSupabase } from '../../context/SupabaseContext';
+import { useAuth } from '../../context/AuthContext';
 
 const Settings = () => {
   const { supabase, isAuthenticated } = useSupabase();
+  const { user } = useAuth();
   
   const [settings, setSettings] = useState({
     businessName: 'La Bella Noches',
@@ -37,16 +39,25 @@ const Settings = () => {
 
   const loadBusinessSettings = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke('business-operations', {
-        body: { action: 'get-settings' }
-      });
+      console.log('Loading business settings from database...');
+      
+      // Query the businesses table directly
+      const { data: business, error } = await supabase
+        .from('businesses')
+        .select('*')
+        .eq('name', 'La Bella Noches')
+        .maybeSingle();
       
       if (error) {
-        throw new Error(error.message);
+        console.error('Error fetching business settings:', error);
+        toast.error('Failed to load business settings');
+        return;
       }
       
-      if (data?.success && data.data) {
-        const business = data.data;
+      if (business) {
+        console.log('Business settings loaded:', business);
+        
+        // Map database fields to settings state
         setSettings(prev => ({
           ...prev,
           businessName: business.name || prev.businessName,
@@ -58,7 +69,7 @@ const Settings = () => {
           twilioNumber: business.twilio_number || ''
         }));
       } else {
-        throw new Error(data?.error || 'Failed to load business settings');
+        console.log('No business record found, using default settings');
       }
     } catch (error) {
       console.error('Error loading business settings:', error);
@@ -67,25 +78,76 @@ const Settings = () => {
   };
 
   const handleSave = async () => {
+    if (!user) {
+      toast.error('Authentication required to save settings');
+      return;
+    }
+
     setLoading(true);
     
     try {
-      const { data, error } = await supabase.functions.invoke('business-operations', {
-        body: { action: 'update-settings', settings }
-      });
+      console.log('Saving business settings...');
       
-      if (error) {
-        throw new Error(error.message);
+      // Map settings state to database columns
+      const updatePayload = {
+        name: settings.businessName,
+        address: settings.address,
+        phone_number: settings.phone,
+        admin_email: settings.email,
+        website: settings.website,
+        webhook_url: settings.webhookUrl && settings.webhookUrl.trim() !== '' ? settings.webhookUrl : null,
+        twilio_number: settings.twilioNumber && settings.twilioNumber.trim() !== '' ? settings.twilioNumber : null
+      };
+
+      // Try to update existing business record
+      const { data: updatedBusiness, error: updateError } = await supabase
+        .from('businesses')
+        .update(updatePayload)
+        .eq('name', 'La Bella Noches')
+        .select()
+        .maybeSingle();
+
+      if (updateError) {
+        console.error('Error updating business:', updateError);
+        throw new Error(`Failed to update business settings: ${updateError.message}`);
       }
-      
-      if (data?.success) {
-        console.log('Settings saved successfully:', data.data);
-        setSaved(true);
-        toast.success('Settings saved successfully!');
-        setTimeout(() => setSaved(false), 3000);
+
+      // If no record was updated, create a new one
+      if (!updatedBusiness) {
+        console.log('No existing business record found, creating new one...');
+        
+        const insertPayload = {
+          ...updatePayload,
+          industry: 'Restaurant',
+          active: true,
+          timezone: 'UTC',
+          settings: {},
+          twilio_config: {},
+          created_by: user.id
+        };
+
+        const { data: newBusiness, error: insertError } = await supabase
+          .from('businesses')
+          .insert(insertPayload)
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error('Error creating business:', insertError);
+          throw new Error(`Failed to create business record: ${insertError.message}`);
+        }
+
+        console.log('New business record created:', newBusiness);
       } else {
-        throw new Error(data?.error || 'Failed to save settings');
+        console.log('Business record updated:', updatedBusiness);
       }
+
+      setSaved(true);
+      toast.success('Settings saved successfully!');
+      
+      // Reset saved state after 3 seconds
+      setTimeout(() => setSaved(false), 3000);
+      
     } catch (error) {
       console.error('Error saving settings:', error);
       toast.error('Failed to save settings. Please try again.');
@@ -264,7 +326,7 @@ const Settings = () => {
               <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">API Status</h3>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-300">Airtable Connection</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-300">Database Connection</span>
                   <span className="text-green-600 text-sm font-medium">Connected</span>
                 </div>
                 <div className="flex items-center justify-between">
