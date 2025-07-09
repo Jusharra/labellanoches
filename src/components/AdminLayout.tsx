@@ -49,7 +49,7 @@ export const useTemplates = () => {
 const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
-  const { user, signOut } = useAuth();
+  const { user, userRole, signOut } = useAuth();
   
   // Shared template state
   const [templates, setTemplates] = useState<Template[]>([
@@ -270,7 +270,7 @@ const AdminLayout = () => {
             <div className="flex items-center space-x-2">
               <User className="h-4 w-4 text-gray-600 dark:text-gray-300" />
               <span className="text-sm text-gray-600 dark:text-gray-300">
-                {user?.email || 'Admin'}
+                {user?.email || 'Admin'} {userRole ? `(${userRole})` : ''}
               </span>
               <button
                 onClick={signOut}

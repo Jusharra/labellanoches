@@ -5,7 +5,9 @@ import { useSupabase } from './SupabaseContext';
 interface AuthContextType {
   user: User | null;
   session: Session | null;
+  userRole: string | null;
   isLoading: boolean;
+  isLoadingRole: boolean;
   isAuthenticated: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string) => Promise<{ error: any }>;
@@ -34,7 +36,7 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const { supabase, user, session, isLoading, isAuthenticated } = useSupabase();
+  const { supabase, user, session, userRole, isLoading, isLoadingRole, isAuthenticated } = useSupabase();
 
   const signIn = async (email: string, password: string) => {
     console.log('🔐 Attempting to sign in:', email);
@@ -119,7 +121,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const value: AuthContextType = {
     user,
     session,
+    userRole,
     isLoading,
+    isLoadingRole,
     isAuthenticated,
     signIn,
     signUp,

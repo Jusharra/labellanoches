@@ -12,10 +12,7 @@ const Navbar = () => {
     return false;
   });
   const location = useLocation();
-  const { user, isAuthenticated, signOut } = useAuth();
-
-  // Check if user is admin
-  const isAdmin = user?.user_metadata?.role === 'admin';
+  const { user, userRole, isAuthenticated, signOut } = useAuth();
 
   const toggleDarkMode = () => {
     const newDarkMode = !isDark;
@@ -46,7 +43,7 @@ const Navbar = () => {
   ];
 
   // Add Dashboard for admin users
-  const navigation = isAdmin 
+  const navigation = userRole === 'admin' 
     ? [
         ...baseNavigation,
         { name: 'Dashboard', href: '/admin' },

@@ -6,7 +6,9 @@ interface SupabaseContextType {
   supabase: SupabaseClient;
   user: User | null;
   session: Session | null;
+  userRole: string | null;
   isLoading: boolean;
+  isLoadingRole: boolean;
   isAuthenticated: boolean;
 }
 
@@ -27,7 +29,40 @@ interface SupabaseProviderProps {
 export const SupabaseProvider: React.FC<SupabaseProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingRole, setIsLoadingRole] = useState(false);
+
+  // Function to fetch user role from user_profiles table
+  const fetchUserRole = async (userId: string) => {
+    setIsLoadingRole(true);
+    try {
+      console.log('🔍 Fetching user role for:', userId);
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          console.log('👤 User profile not found, user may not have a role assigned');
+          setUserRole(null);
+        } else {
+          console.error('❌ Error fetching user role:', error);
+          setUserRole(null);
+        }
+      } else {
+        console.log('✅ User role fetched:', data.role);
+        setUserRole(data.role);
+      }
+    } catch (error) {
+      console.error('❌ Unexpected error fetching user role:', error);
+      setUserRole(null);
+    } finally {
+      setIsLoadingRole(false);
+    }
+  };
 
   useEffect(() => {
     console.log('🔐 Initializing Supabase auth...');
@@ -43,6 +78,13 @@ export const SupabaseProvider: React.FC<SupabaseProviderProps> = ({ children }) 
           console.log('✅ Initial session loaded:', session ? 'authenticated' : 'not authenticated');
           setSession(session);
           setUser(session?.user ?? null);
+          
+          // Fetch user role if user is authenticated
+          if (session?.user) {
+            fetchUserRole(session.user.id);
+          } else {
+            setUserRole(null);
+          }
         }
       } catch (error) {
         console.error('❌ Error in getInitialSession:', error);
@@ -60,6 +102,14 @@ export const SupabaseProvider: React.FC<SupabaseProviderProps> = ({ children }) 
         
         setSession(session);
         setUser(session?.user ?? null);
+        
+        // Fetch user role when user state changes
+        if (session?.user) {
+          fetchUserRole(session.user.id);
+        } else {
+          setUserRole(null);
+        }
+        
         setIsLoading(false);
 
         // Handle specific auth events
@@ -93,7 +143,9 @@ export const SupabaseProvider: React.FC<SupabaseProviderProps> = ({ children }) 
     supabase,
     user,
     session,
+    userRole,
     isLoading,
+    isLoadingRole,
     isAuthenticated: !!user && !!session
   };
 

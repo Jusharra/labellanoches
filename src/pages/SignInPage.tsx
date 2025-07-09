@@ -8,18 +8,16 @@ const SignInPage = () => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [justSignedIn, setJustSignedIn] = useState(false);
-  const { signIn, user, isAuthenticated } = useAuth();
+  const { signIn, user, userRole, isAuthenticated, isLoadingRole } = useAuth();
   const navigate = useNavigate();
 
   // Handle redirection after successful authentication
   useEffect(() => {
-    if (justSignedIn && isAuthenticated && user) {
+    if (justSignedIn && isAuthenticated && user && !isLoadingRole) {
       setJustSignedIn(false);
       setIsLoading(false);
       
-      const isAdmin = user?.user_metadata?.role === 'admin';
-      
-      if (isAdmin) {
+      if (userRole === 'admin') {
         toast.success('Welcome back, Admin!');
         navigate('/admin');
       } else {
@@ -27,7 +25,7 @@ const SignInPage = () => {
         navigate('/');
       }
     }
-  }, [justSignedIn, isAuthenticated, user, navigate]);
+  }, [justSignedIn, isAuthenticated, user, userRole, isLoadingRole, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
