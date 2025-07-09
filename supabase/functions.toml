@@ -16,3 +16,6 @@ schedule = "*/1 * * * *"
 
 [campaign-operations]
 # Handles CRUD operations for campaigns
+
+[contacts-operations]
+# Handles CRUD operations for contacts and contact lists
