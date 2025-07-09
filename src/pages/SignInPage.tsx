@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -7,8 +7,27 @@ const SignInPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn } = useAuth();
+  const [justSignedIn, setJustSignedIn] = useState(false);
+  const { signIn, user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
+  // Handle redirection after successful authentication
+  useEffect(() => {
+    if (justSignedIn && isAuthenticated && user) {
+      setJustSignedIn(false);
+      setIsLoading(false);
+      
+      const isAdmin = user?.user_metadata?.role === 'admin';
+      
+      if (isAdmin) {
+        toast.success('Welcome back, Admin!');
+        navigate('/admin');
+      } else {
+        toast.success('Welcome back!');
+        navigate('/');
+      }
+    }
+  }, [justSignedIn, isAuthenticated, user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,13 +48,13 @@ const SignInPage = () => {
         } else {
           toast.error(error.message || 'An error occurred during sign in');
         }
+        setIsLoading(false);
       } else {
-        toast.success('Welcome back!');
-        navigate('/admin');
+        setJustSignedIn(true);
+        // Don't set isLoading to false here - let the useEffect handle it after redirect
       }
     } catch (error) {
       toast.error('An unexpected error occurred');
-    } finally {
       setIsLoading(false);
     }
   };
