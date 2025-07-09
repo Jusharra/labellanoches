@@ -32,6 +32,12 @@ Deno.serve(async (req) => {
     const url = new URL(req.url)
     const searchParams = url.searchParams
 
+    // Handle GET requests for fetching lists
+    if (req.method === 'GET') {
+      console.log('🔍 Handling GET request for contact lists')
+      return await handleGetLists(supabase, searchParams)
+    }
+
     // Handle function invocation with body parameters
     let requestBody: any = null
     if (req.method === 'POST') {
