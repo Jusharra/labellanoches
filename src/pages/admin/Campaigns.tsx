@@ -124,7 +124,7 @@ const Campaigns = () => {
         // Clean up any double-quoted UUIDs before setting state
         const cleanedLists = (data.data || []).map(list => ({
           ...list,
-          id: typeof list.id === 'string' ? list.id.replace(/^"|"$/g, '') : list.id
+          id: typeof list.id === 'string' ? list.id.replace(/"/g, '') : list.id
         }));
         setContactLists(cleanedLists);
       } else {
