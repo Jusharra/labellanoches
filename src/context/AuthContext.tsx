@@ -26,7 +26,7 @@ export const useAuth = () => {
   return context;
 };
 
-const useUser = () => {
+export const useUser = () => {
   const { user } = useAuth();
   return user;
 };
