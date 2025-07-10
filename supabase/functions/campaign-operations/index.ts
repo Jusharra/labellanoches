@@ -1,8 +1,54 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.3';
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 
-serve(async (req) => {
-  const { action, ...rest } = await req.json();
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, PUT, DELETE',
+};
+
+Deno.serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
+  // Initialize default values
+  let action = null;
+  let rest = {};
+
+  // Try to parse JSON body with error handling
+  try {
+    const body = await req.json();
+    action = body.action;
+    rest = { ...body };
+    delete rest.action;
+  } catch (error) {
+    console.error('Error parsing JSON request body:', error);
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: 'Invalid JSON in request body. Please ensure the request contains valid JSON data.' 
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
+        status: 400 
+      }
+    );
+  }
+
+  // Validate that action is provided
+  if (!action) {
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: 'Missing required "action" parameter in request body.' 
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
+        status: 400 
+      }
+    );
+  }
   
   // Initialize Supabase client with the service role key to bypass RLS for administrative actions
   // In a production environment, ensure SUPABASE_SERVICE_ROLE_KEY is set as a secret for the Edge function.
@@ -27,7 +73,7 @@ serve(async (req) => {
         console.error('Error fetching campaigns:', campaignsError);
         return new Response(
           JSON.stringify({ success: false, error: campaignsError.message }),
-          { headers: { 'Content-Type': 'application/json' }, status: 500 },
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 },
         );
       }
 
@@ -40,7 +86,7 @@ serve(async (req) => {
         console.error('Error fetching contact lists:', contactListsError);
         return new Response(
           JSON.stringify({ success: false, error: contactListsError.message }),
-          { headers: { 'Content-Type': 'application/json' }, status: 500 },
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 },
         );
       }
 
@@ -55,7 +101,7 @@ serve(async (req) => {
         console.error('Error fetching campaign logs:', campaignLogsError);
         return new Response(
           JSON.stringify({ success: false, error: campaignLogsError.message }),
-          { headers: { 'Content-Type': 'application/json' }, status: 500 },
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 },
         );
       }
 
@@ -99,7 +145,7 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ success: true, data: formattedCampaigns }),
-        { headers: { 'Content-Type': 'application/json' }, status: 200 },
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 },
       );
     } else if (action === 'create_campaign') {
       const { name, selectedLists, messageContent, channel, scheduledDate, scheduleTime, mediaUrl, campaignType, templateName } = rest;
@@ -137,13 +183,13 @@ serve(async (req) => {
         console.error('Error creating campaign:', insertError);
         return new Response(
           JSON.stringify({ success: false, error: insertError.message }),
-          { headers: { 'Content-Type': 'application/json' }, status: 500 },
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 },
         );
       }
 
       return new Response(
         JSON.stringify({ success: true, data: newCampaign }),
-        { headers: { 'Content-Type': 'application/json' }, status: 201 },
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 201 },
       );
     } else if (action === 'delete_campaign') {
       const { campaign_id } = rest;
@@ -157,13 +203,13 @@ serve(async (req) => {
         console.error('Error deleting campaign:', deleteError);
         return new Response(
           JSON.stringify({ success: false, error: deleteError.message }),
-          { headers: { 'Content-Type': 'application/json' }, status: 500 },
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 },
         );
       }
 
       return new Response(
         JSON.stringify({ success: true, message: 'Campaign deleted successfully' }),
-        { headers: { 'Content-Type': 'application/json' }, status: 200 },
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 },
       );
     } else if (action === 'update_campaign') {
       const { campaign_id, status } = rest; 
@@ -179,25 +225,25 @@ serve(async (req) => {
         console.error('Error updating campaign:', updateError);
         return new Response(
           JSON.stringify({ success: false, error: updateError.message }),
-          { headers: { 'Content-Type': 'application/json' }, status: 500 },
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 },
         );
       }
 
       return new Response(
         JSON.stringify({ success: true, data: updatedCampaign }),
-        { headers: { 'Content-Type': 'application/json' }, status: 200 },
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 },
       );
     }
 
     return new Response(
       JSON.stringify({ success: false, error: 'Invalid action' }),
-      { headers: { 'Content-Type': 'application/json' }, status: 400 },
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 },
     );
   } catch (error) {
     console.error('Unhandled error in campaign-operations:', error);
     return new Response(
       JSON.stringify({ success: false, error: error.message || 'An unexpected error occurred' }),
-      { headers: { 'Content-Type': 'application/json' }, status: 500 },
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 },
     );
   }
 });
