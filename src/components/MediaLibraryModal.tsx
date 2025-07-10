@@ -146,7 +146,7 @@ const MediaLibraryModal: React.FC<MediaLibraryModalProps> = ({ onClose, onSelect
       
       // Upload to Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('campaign-media')
+        .from('media-library')
         .upload(filePath, file, {
           onUploadProgress: (progress) => {
             const percent = Math.round((progress.loaded / progress.total) * 100);
@@ -160,7 +160,7 @@ const MediaLibraryModal: React.FC<MediaLibraryModalProps> = ({ onClose, onSelect
       
       // Get public URL
       const { data: urlData } = await supabase.storage
-        .from('campaign-media')
+        .from('media-library')
         .getPublicUrl(filePath);
         
       if (!urlData?.publicUrl) {
