@@ -231,67 +231,68 @@ const ContactLists = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-2 sm:space-y-0">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Contact Lists</h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-300">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Contact Lists</h1>
+          <p className="mt-1 sm:mt-2 text-sm sm:text-base text-gray-600 dark:text-gray-300">
             Organize your contacts into targeted lists for campaigns
           </p>
         </div>
         <div className="flex space-x-2">
           <button
             onClick={fetchContactLists}
-            className="flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            className="flex items-center px-2 sm:px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             title="Refresh lists"
           >
             <RefreshCw className="h-4 w-4" />
           </button>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+            className="flex items-center px-3 sm:px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm sm:text-base"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Create List
+            <span className="hidden sm:inline">Create List</span>
+            <span className="sm:hidden">Create</span>
           </button>
         </div>
       </div>
 
       {/* Lists Grid */}
       {contactLists.length === 0 ? (
-        <div className="text-center py-12">
+        <div className="text-center py-8 sm:py-12">
           <div className="mx-auto w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
             <Users className="w-8 h-8 text-gray-400" />
           </div>
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+          <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-2">
             No contact lists found
           </h3>
-          <p className="text-gray-500 dark:text-gray-400 mb-6">
+          <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 mb-4 sm:mb-6">
             Create your first contact list to organize your contacts for targeted campaigns.
           </p>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+            className="inline-flex items-center px-3 sm:px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm sm:text-base"
           >
             <Plus className="h-4 w-4 mr-2" />
             Create First List
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
           {contactLists.map((list) => (
-            <div key={list.id} className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center">
+            <div key={list.id} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 sm:p-6 hover:shadow-lg transition-shadow">
+              <div className="flex items-start justify-between mb-3 sm:mb-4">
+                <div className="flex items-center min-w-0 flex-1">
                   <div className="flex-shrink-0 w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
                     <Users className="h-5 w-5 text-primary" />
                   </div>
-                  <div className="ml-3">
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white">{list.name}</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{list.contactCount} contacts</p>
+                  <div className="ml-3 min-w-0">
+                    <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white truncate">{list.name}</h3>
+                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{list.contactCount} contacts</p>
                   </div>
                 </div>
-                <div className="flex space-x-1">
+                <div className="flex space-x-1 ml-2">
                   <button 
                     onClick={() => handleEditList(list)}
                     className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
@@ -309,13 +310,13 @@ const ContactLists = () => {
                 </div>
               </div>
               
-              <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">{list.description}</p>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-3 sm:mb-4 line-clamp-2">{list.description}</p>
               
-              <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs text-gray-500 dark:text-gray-400 space-y-1 sm:space-y-0">
                 <span>Created: {list.createdDate}</span>
                 <button 
                   onClick={() => handleManageList(list)}
-                  className="text-primary hover:text-primary/80 font-medium transition-colors"
+                  className="text-primary hover:text-primary/80 font-medium transition-colors text-left sm:text-right"
                 >
                   Manage List
                 </button>
@@ -327,21 +328,21 @@ const ContactLists = () => {
 
       {/* Create List Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div className="fixed inset-0 z-50 overflow-y-auto p-4">
+          <div className="flex items-center justify-center min-h-screen">
             <div className="fixed inset-0 transition-opacity" aria-hidden="true">
               <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
             </div>
 
-            <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-              <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+            <div className="inline-block w-full max-w-lg bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all align-middle">
+              <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6">
+                <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-4">
                   Create New Contact List
                 </h3>
                 
                 <div className="space-y-4">
                   <div>
-                    <label htmlFor="listName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label htmlFor="listName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
                       List Name *
                     </label>
                     <input
@@ -349,13 +350,13 @@ const ContactLists = () => {
                       id="listName"
                       value={newListName}
                       onChange={(e) => setNewListName(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base"
                       placeholder="e.g., Holiday Specials"
                     />
                   </div>
                   
                   <div>
-                    <label htmlFor="listDescription" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label htmlFor="listDescription" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
                       Description (Optional)
                     </label>
                     <textarea
@@ -363,23 +364,23 @@ const ContactLists = () => {
                       value={newListDescription}
                       onChange={(e) => setNewListDescription(e.target.value)}
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base"
                       placeholder="Describe this contact list..."
                     />
                   </div>
                 </div>
               </div>
               
-              <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+              <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 flex flex-col sm:flex-row-reverse space-y-2 sm:space-y-0 sm:space-x-3 sm:space-x-reverse">
                 <button
                   onClick={handleCreateList}
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary text-base font-medium text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary sm:ml-3 sm:w-auto sm:text-sm"
+                  className="w-full sm:w-auto inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary text-sm sm:text-base font-medium text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
                 >
                   Create List
                 </button>
                 <button
                   onClick={() => setShowCreateModal(false)}
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                  className="w-full sm:w-auto inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-sm sm:text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
                   Cancel
                 </button>
@@ -391,21 +392,21 @@ const ContactLists = () => {
 
       {/* Edit List Modal */}
       {showEditModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div className="fixed inset-0 z-50 overflow-y-auto p-4">
+          <div className="flex items-center justify-center min-h-screen">
             <div className="fixed inset-0 transition-opacity" aria-hidden="true">
               <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
             </div>
 
-            <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-              <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+            <div className="inline-block w-full max-w-lg bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all align-middle">
+              <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6">
+                <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-4">
                   Edit Contact List
                 </h3>
                 
                 <div className="space-y-4">
                   <div>
-                    <label htmlFor="editListName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label htmlFor="editListName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
                       List Name *
                     </label>
                     <input
@@ -413,13 +414,13 @@ const ContactLists = () => {
                       id="editListName"
                       value={editListData.name}
                       onChange={(e) => handleEditListChange('name', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base"
                       placeholder="e.g., Holiday Specials"
                     />
                   </div>
                   
                   <div>
-                    <label htmlFor="editListDescription" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label htmlFor="editListDescription" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
                       Description (Optional)
                     </label>
                     <textarea
@@ -427,17 +428,17 @@ const ContactLists = () => {
                       value={editListData.description}
                       onChange={(e) => handleEditListChange('description', e.target.value)}
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base"
                       placeholder="Describe this contact list..."
                     />
                   </div>
 
                   <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-                    <div className="flex justify-between text-sm">
+                    <div className="flex flex-col sm:flex-row sm:justify-between text-sm space-y-1 sm:space-y-0">
                       <span className="text-gray-600 dark:text-gray-400">Contacts in list:</span>
                       <span className="font-medium text-gray-900 dark:text-white">{editListData.contactCount}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
+                    <div className="flex flex-col sm:flex-row sm:justify-between text-sm space-y-1 sm:space-y-0">
                       <span className="text-gray-600 dark:text-gray-400">Created:</span>
                       <span className="font-medium text-gray-900 dark:text-white">{editListData.createdDate}</span>
                     </div>
@@ -445,16 +446,16 @@ const ContactLists = () => {
                 </div>
               </div>
               
-              <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+              <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 flex flex-col sm:flex-row-reverse space-y-2 sm:space-y-0 sm:space-x-3 sm:space-x-reverse">
                 <button
                   onClick={handleUpdateList}
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary text-base font-medium text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary sm:ml-3 sm:w-auto sm:text-sm"
+                  className="w-full sm:w-auto inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary text-sm sm:text-base font-medium text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
                 >
                   Update List
                 </button>
                 <button
                   onClick={() => setShowEditModal(false)}
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                  className="w-full sm:w-auto inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-sm sm:text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
                   Cancel
                 </button>

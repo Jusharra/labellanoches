@@ -286,16 +286,16 @@ const AdminLayout = () => {
       </div>
 
       {/* Main content */}
-      <div className="flex-1 lg:ml-0">
+      <div className="flex-1 lg:ml-0 min-w-0">
         {/* Top bar */}
-        <div className="lg:hidden flex items-center justify-between h-16 px-4 bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+        <div className="lg:hidden flex items-center justify-between h-16 px-4 sm:px-6 bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           >
             <Menu className="h-6 w-6" />
           </button>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 sm:space-x-4">
             <User className="h-4 w-4 text-gray-600 dark:text-gray-300" />
             <button
               onClick={signOut}
@@ -309,7 +309,7 @@ const AdminLayout = () => {
 
         {/* Page content */}
         <TemplateContext.Provider value={templateContextValue}>
-            <main className="p-6">
+            <main className="p-4 sm:p-6 lg:p-8">
               <Outlet />
             </main>
         </TemplateContext.Provider>

@@ -141,34 +141,34 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
-        <p className="mt-2 text-gray-600 dark:text-gray-300">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+        <p className="mt-1 sm:mt-2 text-sm sm:text-base text-gray-600 dark:text-gray-300">
           Welcome to your admin dashboard. Here's an overview of your SMS marketing performance.
         </p>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
-            <div key={stat.name} className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div key={stat.name} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 sm:p-6">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <Icon className="h-8 w-8 text-primary" />
+                  <Icon className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
                 </div>
-                <div className="ml-5 w-0 flex-1">
+                <div className="ml-3 sm:ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
+                    <dt className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
                       {stat.name}
                     </dt>
                     <dd className="flex items-baseline">
-                      <div className="text-2xl font-semibold text-gray-900 dark:text-white">
+                      <div className="text-lg sm:text-2xl font-semibold text-gray-900 dark:text-white">
                         {stat.value}
                       </div>
-                      <div className={`ml-2 flex items-baseline text-sm font-semibold ${
+                      <div className={`ml-1 sm:ml-2 flex items-baseline text-xs sm:text-sm font-semibold ${
                         stat.changeType === 'increase' ? 'text-green-600' : 'text-red-600'
                       }`}>
                         {stat.change}
@@ -184,29 +184,29 @@ const Dashboard = () => {
 
       {/* Recent Campaigns */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-lg font-medium text-gray-900 dark:text-white">Recent Campaigns</h2>
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white">Recent Campaigns</h2>
         </div>
         {loading ? (
-          <div className="p-6 text-center">
+          <div className="p-4 sm:p-6 text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-gray-500 dark:text-gray-400">Loading campaigns...</p>
+            <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400">Loading campaigns...</p>
           </div>
         ) : recentCampaigns.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Campaign
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Recipients
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Date
                   </th>
                 </tr>
@@ -214,10 +214,10 @@ const Dashboard = () => {
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {recentCampaigns.map((campaign) => (
                   <tr key={campaign.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
                       {campaign.name}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                         campaign.status === 'sent' 
                           ? 'bg-green-100 text-green-800' 
@@ -228,10 +228,10 @@ const Dashboard = () => {
                         {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 dark:text-gray-300">
                       {campaign.recipients.toLocaleString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 dark:text-gray-300">
                       {campaign.date}
                     </td>
                   </tr>
@@ -240,50 +240,50 @@ const Dashboard = () => {
             </table>
           </div>
         ) : (
-          <div className="p-6 text-center text-gray-500 dark:text-gray-400">
+          <div className="p-4 sm:p-6 text-center text-gray-500 dark:text-gray-400">
             <MessageSquare className="h-12 w-12 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
-            <p>No campaigns created yet. Create your first campaign to get started!</p>
+            <p className="text-sm sm:text-base">No campaigns created yet. Create your first campaign to get started!</p>
           </div>
         )}
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Quick Actions</h3>
-          <div className="space-y-3">
-            <button className="w-full text-left px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-3 sm:mb-4">Quick Actions</h3>
+          <div className="space-y-2 sm:space-y-3">
+            <button className="w-full text-left px-3 sm:px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm sm:text-base">
               Create New Campaign
             </button>
-            <button className="w-full text-left px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+            <button className="w-full text-left px-3 sm:px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base">
               Add Menu Item
             </button>
-            <button className="w-full text-left px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+            <button className="w-full text-left px-3 sm:px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base">
               Upload Contacts
             </button>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">System Status</h3>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-3 sm:mb-4">System Status</h3>
+          <div className="space-y-2 sm:space-y-3">
+            <div className="flex items-center justify-between text-sm">
               <span className="text-sm text-gray-600 dark:text-gray-300">SMS Service</span>
               <span className="text-green-600 text-sm font-medium">Operational</span>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between text-sm">
               <span className="text-sm text-gray-600 dark:text-gray-300">WhatsApp API</span>
               <span className="text-green-600 text-sm font-medium">Operational</span>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between text-sm">
               <span className="text-sm text-gray-600 dark:text-gray-300">Database</span>
               <span className="text-green-600 text-sm font-medium">Operational</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Tips</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-3 sm:mb-4">Tips</h3>
           <div className="text-sm text-gray-600 dark:text-gray-300 space-y-2">
             <p>• Schedule campaigns during peak hours (11 AM - 2 PM, 5 PM - 8 PM)</p>
             <p>• Use personalized templates for better engagement</p>

@@ -63,20 +63,20 @@ const Navbar = () => {
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-2">
               <ChefHat className="h-8 w-8 text-primary" />
-              <span className="font-playfair text-xl font-semibold text-accent dark:text-white">
+              <span className="font-playfair text-lg sm:text-xl font-semibold text-accent dark:text-white">
                 La Bella Noches
               </span>
             </Link>
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:block">
-            <div className="ml-10 flex items-center space-x-8">
+          <div className="hidden lg:block">
+            <div className="ml-6 xl:ml-10 flex items-center space-x-4 xl:space-x-8">
               {navigation.map((item) => (
                 <Link
                   key={item.name}
                   to={item.href}
-                  className={`px-3 py-2 text-sm font-medium transition-colors ${
+                  className={`px-2 xl:px-3 py-2 text-sm font-medium transition-colors ${
                     isActive(item.href)
                       ? 'text-primary border-b-2 border-primary'
                       : 'text-gray-600 dark:text-gray-300 hover:text-primary'
@@ -97,8 +97,8 @@ const Navbar = () => {
               
               {/* Auth Buttons */}
               {isAuthenticated ? (
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 xl:space-x-4">
+                  <div className="hidden xl:flex items-center space-x-2">
                     <User className="h-4 w-4 text-gray-600 dark:text-gray-300" />
                     <span className="text-sm text-gray-600 dark:text-gray-300">
                       {user?.email}
@@ -106,10 +106,10 @@ const Navbar = () => {
                   </div>
                   <button
                     onClick={handleSignOut}
-                    className="flex items-center space-x-1 px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-red-600 transition-colors"
+                    className="flex items-center space-x-1 px-2 xl:px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-red-600 transition-colors"
                   >
                     <LogOut className="h-4 w-4" />
-                    <span>Sign Out</span>
+                    <span className="hidden xl:inline">Sign Out</span>
                   </button>
                 </div>
               ) : (
@@ -124,7 +124,7 @@ const Navbar = () => {
           </div>
 
           {/* Mobile menu button */}
-          <div className="md:hidden">
+          <div className="lg:hidden">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="text-gray-600 dark:text-gray-300 hover:text-primary focus:outline-none focus:text-primary"
@@ -137,7 +137,7 @@ const Navbar = () => {
 
       {/* Mobile Navigation */}
       {isMenuOpen && (
-        <div className="md:hidden">
+        <div className="lg:hidden">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
             {navigation.map((item) => (
               <Link
@@ -164,7 +164,7 @@ const Navbar = () => {
             </button>
             
             {/* Mobile Auth */}
-            <div className="px-3 py-2">
+            <div className="px-3 py-2 border-t border-gray-200 dark:border-gray-700">
               {isAuthenticated ? (
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2 text-gray-600 dark:text-gray-300">

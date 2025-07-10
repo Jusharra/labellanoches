@@ -409,47 +409,48 @@ const Campaigns = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-2 sm:space-y-0">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Campaigns</h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-300">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Campaigns</h1>
+          <p className="mt-1 sm:mt-2 text-sm sm:text-base text-gray-600 dark:text-gray-300">
             Create and manage your SMS and WhatsApp marketing campaigns
           </p>
         </div>
         <div className="flex space-x-2">
           <button
             onClick={fetchCampaigns}
-            className="flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            className="flex items-center px-2 sm:px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             title="Refresh campaigns"
           >
             <RefreshCw className="h-4 w-4" />
           </button>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+            className="flex items-center px-3 sm:px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm sm:text-base"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Create Campaign
+            <span className="hidden sm:inline">Create Campaign</span>
+            <span className="sm:hidden">Create</span>
           </button>
         </div>
       </div>
 
       {/* Campaigns Table */}
       {campaigns.length === 0 ? (
-        <div className="text-center py-12">
+        <div className="text-center py-8 sm:py-12">
           <div className="mx-auto w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
             <Send className="w-8 h-8 text-gray-400" />
           </div>
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+          <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-2">
             No campaigns found
           </h3>
-          <p className="text-gray-500 dark:text-gray-400 mb-6">
+          <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 mb-4 sm:mb-6">
             Create your first campaign to start reaching your customers via SMS and WhatsApp.
           </p>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+            className="inline-flex items-center px-3 sm:px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm sm:text-base"
           >
             <Plus className="h-4 w-4 mr-2" />
             Create First Campaign
@@ -458,28 +459,28 @@ const Campaigns = () => {
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Campaign
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden sm:table-cell">
                     Target Lists
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Channel
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden lg:table-cell">
                     Scheduled
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden md:table-cell">
                     Sent
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -487,35 +488,35 @@ const Campaigns = () => {
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {campaigns.map((campaign) => (
                   <tr key={campaign.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <div className="flex items-center">
                         <div>
-                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                          <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
                             {campaign.name}
                           </div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
                             {campaign.templateName}
                           </div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(campaign.status)}`}>
                         {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-900 dark:text-white hidden sm:table-cell">
                       {campaign.listName}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                       <div className="flex items-center space-x-1">
                         {getChannelIcon(campaign.channel)}
-                        <span className="text-sm text-gray-600 dark:text-gray-300 capitalize">
+                        <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 capitalize">
                           {campaign.channel}
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 dark:text-gray-400 hidden lg:table-cell">
                       {campaign.scheduledDate ? (
                         <div>
                           <div>{campaign.scheduledDate}</div>
@@ -527,10 +528,10 @@ const Campaigns = () => {
                         'Not scheduled'
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900 dark:text-white hidden md:table-cell">
                       {campaign.sentCount.toLocaleString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center space-x-2">
                         <button
                           onClick={() => handleViewAnalytics(campaign)}
@@ -567,22 +568,22 @@ const Campaigns = () => {
 
       {/* Create Campaign Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div className="fixed inset-0 z-50 overflow-y-auto p-4">
+          <div className="flex items-center justify-center min-h-screen">
             <div className="fixed inset-0 transition-opacity" aria-hidden="true">
               <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
             </div>
 
-            <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
-              <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+            <div className="inline-block w-full max-w-4xl bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all align-middle">
+              <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6">
+                <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-4">
                   Create New Campaign
                 </h3>
                 
-                <div className="space-y-6">
+                <div className="space-y-4 sm:space-y-6 max-h-96 sm:max-h-none overflow-y-auto">
                   {/* Campaign Name */}
                   <div>
-                    <label htmlFor="campaignName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label htmlFor="campaignName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
                       Campaign Name *
                     </label>
                     <input
@@ -590,22 +591,22 @@ const Campaigns = () => {
                       id="campaignName"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base"
                       placeholder="e.g., Weekend Special Offer"
                     />
                   </div>
 
                   {/* Channel and Campaign Type */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div>
-                      <label htmlFor="channel" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      <label htmlFor="channel" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
                         Channel *
                       </label>
                       <select
                         id="channel"
                         value={formData.channel}
                         onChange={(e) => setFormData({ ...formData, channel: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base"
                       >
                         <option value="sms">SMS</option>
                         <option value="whatsapp">WhatsApp</option>
@@ -614,14 +615,14 @@ const Campaigns = () => {
                     </div>
 
                     <div>
-                      <label htmlFor="campaignType" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      <label htmlFor="campaignType" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
                         Campaign Type
                       </label>
                       <select
                         id="campaignType"
                         value={formData.campaignType}
                         onChange={(e) => setFormData({ ...formData, campaignType: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base"
                       >
                         <option value="Regular Campaign">Regular Campaign</option>
                         <option value="Special Offer">Special Offer</option>
@@ -632,10 +633,10 @@ const Campaigns = () => {
 
                   {/* Contact Lists */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
                       Contact Lists
                     </label>
-                    <div className="border border-gray-300 dark:border-gray-600 rounded-lg p-3 bg-white dark:bg-gray-700 max-h-32 overflow-y-auto">
+                    <div className="border border-gray-300 dark:border-gray-600 rounded-lg p-2 sm:p-3 bg-white dark:bg-gray-700 max-h-24 sm:max-h-32 overflow-y-auto">
                       {contactListsLoading ? (
                         <div className="text-center py-2">
                           <div className="text-sm text-gray-500 dark:text-gray-400">Loading lists...</div>
@@ -645,7 +646,7 @@ const Campaigns = () => {
                           <div className="text-sm text-gray-500 dark:text-gray-400">No contact lists found</div>
                         </div>
                       ) : (
-                        <div className="space-y-2">
+                        <div className="space-y-1 sm:space-y-2">
                           {contactLists.map((list) => (
                             <label key={list.id} className="flex items-center space-x-2 cursor-pointer">
                               <input
@@ -654,7 +655,7 @@ const Campaigns = () => {
                                 onChange={() => handleContactListToggle(list.id)}
                                 className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
                               />
-                              <span className="text-sm text-gray-900 dark:text-white">{list.name}</span>
+                              <span className="text-xs sm:text-sm text-gray-900 dark:text-white">{list.name}</span>
                               <span className="text-xs text-gray-500 dark:text-gray-400">
                                 {list.contactCount} contacts
                               </span>
@@ -667,24 +668,24 @@ const Campaigns = () => {
 
                   {/* Select Template */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
                       Select Template (Optional)
                     </label>
-                    <div className="grid grid-cols-2 gap-3 max-h-48 overflow-y-auto">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 max-h-32 sm:max-h-48 overflow-y-auto">
                       {templates.map((template) => (
                         <div
                           key={template.id}
                           onClick={() => handleTemplateSelect(template)}
-                          className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                          className={`p-2 sm:p-3 border rounded-lg cursor-pointer transition-colors ${
                             formData.selectedTemplate === template.name
                               ? 'border-primary bg-primary/10 dark:bg-primary/20'
                               : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
                           }`}
                         >
-                          <div className="font-medium text-sm text-gray-900 dark:text-white mb-1">
+                          <div className="font-medium text-xs sm:text-sm text-gray-900 dark:text-white mb-1">
                             {template.name}
                           </div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
+                          <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
                             {template.content.substring(0, 50)}...
                           </div>
                         </div>
@@ -694,15 +695,15 @@ const Campaigns = () => {
 
                   {/* Message Content */}
                   <div>
-                    <label htmlFor="messageContent" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label htmlFor="messageContent" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
                       Message Content *
                     </label>
                     <textarea
                       id="messageContent"
                       value={formData.messageContent}
                       onChange={(e) => setFormData({ ...formData, messageContent: e.target.value })}
-                      rows={4}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base"
                       placeholder="Enter your message content..."
                     />
                     <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -712,7 +713,7 @@ const Campaigns = () => {
 
                   {/* Media URL */}
                   <div>
-                    <label htmlFor="mediaUrl" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label htmlFor="mediaUrl" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
                       Media URL (Optional)
                     </label>
                     <div className="flex space-x-2">
@@ -721,18 +722,18 @@ const Campaigns = () => {
                         id="mediaUrl"
                         value={formData.mediaUrl}
                         onChange={(e) => setFormData({ ...formData, mediaUrl: e.target.value })}
-                        className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                        className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base"
                         placeholder="https://images.pexels.com/photos/1640772/pexels-"
                       />
                       <button
                         type="button"
-                        className="px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                        className="hidden sm:block px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm"
                       >
                         📎 Select
                       </button>
                       <button
                         type="button"
-                        className="px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                        className="hidden sm:block px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm"
                       >
                         📤 Upload
                       </button>
@@ -740,9 +741,9 @@ const Campaigns = () => {
                   </div>
 
                   {/* Schedule Date and Time */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div>
-                      <label htmlFor="scheduledDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      <label htmlFor="scheduledDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
                         Schedule Date (Optional)
                       </label>
                       <input
@@ -750,13 +751,13 @@ const Campaigns = () => {
                         id="scheduledDate"
                         value={formData.scheduledDate}
                         onChange={(e) => setFormData({ ...formData, scheduledDate: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base"
                         placeholder="mm/dd/yyyy"
                       />
                     </div>
 
                     <div>
-                      <label htmlFor="scheduleTime" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      <label htmlFor="scheduleTime" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
                         Schedule Time (Optional)
                       </label>
                       <input
@@ -764,7 +765,7 @@ const Campaigns = () => {
                         id="scheduleTime"
                         value={formData.scheduleTime}
                         onChange={(e) => setFormData({ ...formData, scheduleTime: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base"
                         placeholder="--:-- --"
                       />
                     </div>
@@ -772,16 +773,16 @@ const Campaigns = () => {
                 </div>
               </div>
               
-              <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+              <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 flex flex-col sm:flex-row-reverse space-y-2 sm:space-y-0 sm:space-x-3 sm:space-x-reverse">
                 <button
                   onClick={handleCreateCampaign}
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary text-base font-medium text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary sm:ml-3 sm:w-auto sm:text-sm"
+                  className="w-full sm:w-auto inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary text-sm sm:text-base font-medium text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
                 >
                   Create Campaign
                 </button>
                 <button
                   onClick={() => setShowCreateModal(false)}
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                  className="w-full sm:w-auto inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-sm sm:text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
                   Cancel
                 </button>

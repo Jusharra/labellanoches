@@ -105,21 +105,21 @@ const CampaignAnalyticsModal: React.FC<CampaignAnalyticsModalProps> = ({ campaig
   ];
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+    <div className="fixed inset-0 z-50 overflow-y-auto p-4">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="fixed inset-0 transition-opacity" aria-hidden="true">
           <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
         </div>
 
-        <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+        <div className="inline-block w-full max-w-4xl bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all align-middle max-h-full">
           {/* Header */}
-          <div className="bg-white dark:bg-gray-800 px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white">
                   Campaign Analytics
                 </h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
                   {campaign.name}
                 </p>
               </div>
@@ -133,52 +133,52 @@ const CampaignAnalyticsModal: React.FC<CampaignAnalyticsModalProps> = ({ campaig
           </div>
 
           {/* Content */}
-          <div className="bg-white dark:bg-gray-800 px-6 py-4">
+          <div className="bg-white dark:bg-gray-800 px-4 sm:px-6 py-4 overflow-y-auto max-h-96 sm:max-h-none">
             {/* Campaign Info */}
-            <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <div className="mb-4 sm:mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
               <div>
-                <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 mb-1">
+                <div className="flex items-center text-xs sm:text-sm text-gray-500 dark:text-gray-400 mb-1">
                   <Calendar className="h-4 w-4 mr-1" />
                   Created
                 </div>
-                <div className="font-medium text-gray-900 dark:text-white">{campaign.createdDate}</div>
+                <div className="text-sm sm:text-base font-medium text-gray-900 dark:text-white">{campaign.createdDate}</div>
               </div>
               <div>
-                <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 mb-1">
+                <div className="flex items-center text-xs sm:text-sm text-gray-500 dark:text-gray-400 mb-1">
                   <MessageSquare className="h-4 w-4 mr-1" />
                   Channel
                 </div>
-                <div className="font-medium text-gray-900 dark:text-white capitalize">{campaign.channel}</div>
+                <div className="text-sm sm:text-base font-medium text-gray-900 dark:text-white capitalize">{campaign.channel}</div>
               </div>
               <div>
-                <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 mb-1">
+                <div className="flex items-center text-xs sm:text-sm text-gray-500 dark:text-gray-400 mb-1">
                   <Clock className="h-4 w-4 mr-1" />
                   Status
                 </div>
-                <div className="font-medium text-gray-900 dark:text-white capitalize">{campaign.status}</div>
+                <div className="text-sm sm:text-base font-medium text-gray-900 dark:text-white capitalize">{campaign.status}</div>
               </div>
             </div>
 
             {/* Metrics Grid */}
-            <div className="mb-6">
-              <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center">
+            <div className="mb-4 sm:mb-6">
+              <h4 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center">
                 <TrendingUp className="h-5 w-5 mr-2" />
                 Key Metrics
               </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 {metrics.map((metric, index) => {
                   const Icon = metric.icon;
                   return (
-                    <div key={index} className="bg-white dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+                    <div key={index} className="bg-white dark:bg-gray-700 p-3 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-600">
                       <div className="flex items-center">
-                        <div className={`flex-shrink-0 w-10 h-10 ${metric.bgColor} dark:bg-opacity-20 rounded-lg flex items-center justify-center`}>
+                        <div className={`flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 ${metric.bgColor} dark:bg-opacity-20 rounded-lg flex items-center justify-center`}>
                           <Icon className={`h-5 w-5 ${metric.color}`} />
                         </div>
-                        <div className="ml-3">
-                          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        <div className="ml-2 sm:ml-3">
+                          <p className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">
                             {metric.label}
                           </p>
-                          <p className="text-2xl font-semibold text-gray-900 dark:text-white">
+                          <p className="text-lg sm:text-2xl font-semibold text-gray-900 dark:text-white">
                             {metric.value}
                           </p>
                         </div>
@@ -190,18 +190,18 @@ const CampaignAnalyticsModal: React.FC<CampaignAnalyticsModalProps> = ({ campaig
             </div>
 
             {/* Performance Rates */}
-            <div className="mb-6">
-              <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+            <div className="mb-4 sm:mb-6">
+              <h4 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-3 sm:mb-4">
                 Performance Rates
               </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 {rates.map((rate, index) => (
-                  <div key={index} className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">
+                  <div key={index} className="bg-gray-50 dark:bg-gray-700 p-3 sm:p-4 rounded-lg">
+                    <div className="flex justify-between items-center mb-1 sm:mb-2">
+                      <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
                         {rate.label}
                       </span>
-                      <span className="text-lg font-semibold text-primary">
+                      <span className="text-base sm:text-lg font-semibold text-primary">
                         {rate.value}
                       </span>
                     </div>
@@ -215,32 +215,32 @@ const CampaignAnalyticsModal: React.FC<CampaignAnalyticsModalProps> = ({ campaig
 
             {/* Campaign Details */}
             <div>
-              <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+              <h4 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-3 sm:mb-4">
                 Campaign Details
               </h4>
-              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg space-y-3">
+              <div className="bg-gray-50 dark:bg-gray-700 p-3 sm:p-4 rounded-lg space-y-2 sm:space-y-3">
                 <div>
-                  <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Target Lists:</span>
-                  <span className="ml-2 text-sm text-gray-900 dark:text-white">{campaign.listName}</span>
+                  <span className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Target Lists:</span>
+                  <span className="ml-2 text-xs sm:text-sm text-gray-900 dark:text-white">{campaign.listName}</span>
                 </div>
                 <div>
-                  <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Campaign Type:</span>
-                  <span className="ml-2 text-sm text-gray-900 dark:text-white">{campaign.campaignType}</span>
+                  <span className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Campaign Type:</span>
+                  <span className="ml-2 text-xs sm:text-sm text-gray-900 dark:text-white">{campaign.campaignType}</span>
                 </div>
                 <div>
-                  <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Template:</span>
-                  <span className="ml-2 text-sm text-gray-900 dark:text-white">{campaign.templateName}</span>
+                  <span className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Template:</span>
+                  <span className="ml-2 text-xs sm:text-sm text-gray-900 dark:text-white">{campaign.templateName}</span>
                 </div>
                 {campaign.scheduledDate && (
                   <div>
-                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Scheduled Date:</span>
-                    <span className="ml-2 text-sm text-gray-900 dark:text-white">{campaign.scheduledDate}</span>
+                    <span className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Scheduled Date:</span>
+                    <span className="ml-2 text-xs sm:text-sm text-gray-900 dark:text-white">{campaign.scheduledDate}</span>
                   </div>
                 )}
                 {campaign.mediaUrl && (
                   <div>
-                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Media:</span>
-                    <span className="ml-2 text-sm text-blue-600 dark:text-blue-400">Media attached</span>
+                    <span className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">Media:</span>
+                    <span className="ml-2 text-xs sm:text-sm text-blue-600 dark:text-blue-400">Media attached</span>
                   </div>
                 )}
               </div>
@@ -248,11 +248,11 @@ const CampaignAnalyticsModal: React.FC<CampaignAnalyticsModalProps> = ({ campaig
           </div>
 
           {/* Footer */}
-          <div className="bg-gray-50 dark:bg-gray-700 px-6 py-3">
+          <div className="bg-gray-50 dark:bg-gray-700 px-4 sm:px-6 py-3">
             <div className="flex justify-end">
               <button
                 onClick={onClose}
-                className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors"
+                className="px-3 sm:px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors text-sm sm:text-base"
               >
                 Close
               </button>

@@ -80,15 +80,15 @@ const SMSOptInForm = () => {
 
   if (submitted) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8 text-center border border-neutral-gray dark:border-gray-600 transition-colors">
-        <div className="rounded-full bg-primary/10 p-3 mx-auto w-16 h-16 flex items-center justify-center mb-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 sm:p-8 text-center border border-neutral-gray dark:border-gray-600 transition-colors">
+        <div className="rounded-full bg-primary/10 p-3 mx-auto w-12 sm:w-16 h-12 sm:h-16 flex items-center justify-center mb-3 sm:mb-4">
           <Check className="w-8 h-8 text-primary" />
         </div>
-        <h3 className="font-playfair text-2xl font-bold text-accent dark:text-white mb-2">Welcome to Our VIP Club!</h3>
-        <p className="text-gray-600 dark:text-gray-300 mb-4">
+        <h3 className="font-playfair text-xl sm:text-2xl font-bold text-accent dark:text-white mb-2">Welcome to Our VIP Club!</h3>
+        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mb-3 sm:mb-4">
           You'll receive 10% off your first order! Check your phone for exclusive deals and updates.
         </p>
-        <div className="bg-neutral-cream dark:bg-gray-700 rounded-lg p-4">
+        <div className="bg-neutral-cream dark:bg-gray-700 rounded-lg p-3 sm:p-4">
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Your exclusive discount code will arrive within 24 hours via SMS.
           </p>
@@ -98,19 +98,19 @@ const SMSOptInForm = () => {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8 border border-neutral-gray dark:border-gray-600 transition-colors">
-      <div className="text-center mb-8">
-        <h3 className="font-playfair text-2xl font-bold text-accent dark:text-white mb-3">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 sm:p-8 border border-neutral-gray dark:border-gray-600 transition-colors">
+      <div className="text-center mb-6 sm:mb-8">
+        <h3 className="font-playfair text-xl sm:text-2xl font-bold text-accent dark:text-white mb-2 sm:mb-3">
           Join Our VIP SMS Club
         </h3>
-        <p className="text-gray-600 dark:text-gray-300">
+        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300">
           Get exclusive deals, flash menu alerts, and easy ordering straight to your phone!
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
         <div>
-          <label htmlFor="name" className="flex items-center text-sm font-medium text-accent dark:text-white mb-2">
+          <label htmlFor="name" className="flex items-center text-sm font-medium text-accent dark:text-white mb-1 sm:mb-2">
             <Check className="w-4 h-4 mr-2" />
             Name *
           </label>
@@ -120,14 +120,14 @@ const SMSOptInForm = () => {
             name="name"
             required
             disabled={loading}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:opacity-50"
+            className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:opacity-50 text-sm sm:text-base"
             value={formData.name}
             onChange={handleChange}
           />
         </div>
 
         <div>
-          <label htmlFor="phone" className="flex items-center text-sm font-medium text-accent dark:text-white mb-2">
+          <label htmlFor="phone" className="flex items-center text-sm font-medium text-accent dark:text-white mb-1 sm:mb-2">
             <Phone className="w-4 h-4 mr-2" />
             Phone Number (include country code) *
           </label>
@@ -139,14 +139,14 @@ const SMSOptInForm = () => {
             placeholder="+1234567890"
             required
             disabled={loading}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:opacity-50"
+            className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:opacity-50 text-sm sm:text-base"
             value={formData.phone}
             onChange={handleChange}
           />
         </div>
 
         <div>
-          <label htmlFor="whatsapp" className="flex items-center text-sm font-medium text-accent dark:text-white mb-2">
+          <label htmlFor="whatsapp" className="flex items-center text-sm font-medium text-accent dark:text-white mb-1 sm:mb-2">
             <MessageSquare className="w-4 h-4 mr-2" />
             WhatsApp Number (optional)
           </label>
@@ -157,14 +157,14 @@ const SMSOptInForm = () => {
             pattern="^\+[1-9]\d{1,14}$"
             placeholder="+1234567890"
             disabled={loading}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:opacity-50"
+            className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:opacity-50 text-sm sm:text-base"
             value={formData.whatsapp}
             onChange={handleChange}
           />
         </div>
 
         <div>
-          <label htmlFor="email" className="flex items-center text-sm font-medium text-accent dark:text-white mb-2">
+          <label htmlFor="email" className="flex items-center text-sm font-medium text-accent dark:text-white mb-1 sm:mb-2">
             <Mail className="w-4 h-4 mr-2" />
             Email Address (optional)
           </label>
@@ -173,7 +173,7 @@ const SMSOptInForm = () => {
             id="email"
             name="email"
             disabled={loading}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:opacity-50"
+            className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:opacity-50 text-sm sm:text-base"
             value={formData.email}
             onChange={handleChange}
           />
@@ -201,7 +201,7 @@ const SMSOptInForm = () => {
         <button
           type="submit"
           disabled={loading || !formData.permission}
-          className="w-full bg-primary text-white py-3 px-6 rounded-lg font-semibold hover:bg-primary/90 transition-colors duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+          className="w-full bg-primary text-white py-2 sm:py-3 px-4 sm:px-6 rounded-lg text-sm sm:text-base font-semibold hover:bg-primary/90 transition-colors duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
         >
           {loading ? (
             <>
