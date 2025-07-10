@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
     const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     
     if (action === 'get_campaigns') {
-      // Fetch campaigns
+      // Fetch campaigns with business_id included
       const { data: campaigns, error: campaignsError } = await supabaseClient
         .from('campaigns')
         .select(`
@@ -115,7 +115,8 @@ Deno.serve(async (req) => {
           channel,
           media_url,
           message,
-          webhook_url
+          webhook_url,
+          business_id
         `);
 
       if (campaignsError) {
@@ -139,7 +140,21 @@ Deno.serve(async (req) => {
         );
       }
 
+      // Fetch businesses to map business IDs to names
+      const { data: businesses, error: businessesError } = await supabaseClient
+        .from('businesses')
+        .select('id, name');
+
+      if (businessesError) {
+        console.error('Error fetching businesses:', businessesError);
+        return new Response(
+          JSON.stringify({ success: false, error: businessesError.message }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 },
+        );
+      }
+
       const contactListMap = new Map(contactLists.map(list => [list.id, list.list_name]));
+      const businessMap = new Map(businesses.map(business => [business.id, business.name]));
 
       // Fetch campaign logs to calculate sentCount
       const { data: campaignLogs, error: campaignLogsError } = await supabaseClient
@@ -180,6 +195,11 @@ Deno.serve(async (req) => {
           selectedListsNames = listNames.length > 0 ? listNames.join(', ') : 'N/A';
         }
 
+        // Get business name from the businessMap, fallback to 'Unknown Business' if not found
+        const businessName = campaign.business_id 
+          ? businessMap.get(campaign.business_id) || 'Unknown Business'
+          : 'No Business Assigned';
+
         return {
           id: campaign.id,
           name: campaign.title,
@@ -188,12 +208,19 @@ Deno.serve(async (req) => {
           templateName: campaign.message_template || 'Custom Message', 
           scheduledDate: scheduledDate,
           sentCount: sentCounts.get(campaign.id) || 0, 
-          openRate: 'N/A', // Placeholder, as 'opened' status is not in schema
+          // NOTE: openRate is set to 'N/A' because the current database schema does not include 
+          // a mechanism for tracking message opens. To implement this feature, additional 
+          // tracking would need to be added to record when recipients open messages.
+          openRate: 'N/A',
           createdDate: new Date(campaign.created_at).toLocaleDateString(),
           campaignType: campaign.campaign_type,
-          business: 'La Bella Noches', // Placeholder, ideally fetched from user's business
+          // Use actual business name from database instead of hardcoded value
+          business: businessName,
           selectedLists: campaign.target_contact_lists || [],
-          templateId: 'N/A', // Not directly available from DB, can be derived if needed
+          // NOTE: templateId is set to 'N/A' because the campaigns table stores message_template 
+          // (template name) but not a direct ID that maps to frontend template IDs. If a direct 
+          // link is needed, the schema would need to be updated to include a template_id field.
+          templateId: 'N/A',
           channel: campaign.channel,
           scheduleTime: scheduleTime,
           mediaUrl: campaign.media_url,
@@ -207,7 +234,7 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 },
       );
     } else if (action === 'create_campaign') {
-      const { name, sanitizedLists: incomingLists, messageContent, channel, scheduledDate, scheduleTime, mediaUrl, campaignType, templateName, user_id } = rest;
+      const { name, selectedLists, messageContent, channel, scheduledDate, scheduleTime, mediaUrl, campaignType, templateName, user_id } = rest;
       
       // Validate user_id
       if (!user_id || !sanitizeUUID(user_id)) {
@@ -260,14 +287,14 @@ Deno.serve(async (req) => {
         scheduled_time = new Date(`${scheduledDate}T${scheduleTime}`).toISOString();
       }
 
-      // Clean the incoming lists array using utility function
-      const finalSanitizedLists = sanitizeUUIDArray(incomingLists);
+      // Clean selectedLists array using utility function
+      const sanitizedLists = sanitizeUUIDArray(selectedLists);
 
       const { data: newCampaign, error: insertError } = await supabaseClient
         .from('campaigns')
         .insert({
           title: name,
-          target_contact_lists: finalSanitizedLists,
+          target_contact_lists: sanitizedLists,
           message: messageContent,
           channel: channel,
           scheduled_time: scheduled_time,
@@ -354,7 +381,7 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 },
       );
     } else if (action === 'update_campaign_details') {
-      const { campaign_id, name, sanitizedLists: incomingLists, messageContent, channel, scheduledDate, scheduleTime, mediaUrl, campaignType, templateName } = rest;
+      const { campaign_id, name, selectedLists, messageContent, channel, scheduledDate, scheduleTime, mediaUrl, campaignType, templateName } = rest;
 
       if (!campaign_id || !sanitizeUUID(campaign_id)) {
         return new Response(
@@ -398,12 +425,12 @@ Deno.serve(async (req) => {
         scheduled_time = new Date(`${scheduledDate}T${scheduleTime}`).toISOString();
       }
 
-      // Clean the incoming lists array using utility function
-      const finalSanitizedLists = sanitizeUUIDArray(incomingLists);
+      // Clean selectedLists array using utility function
+      const sanitizedLists = sanitizeUUIDArray(selectedLists);
 
       const updateData: any = {};
       if (name !== undefined) updateData.title = name;
-      if (incomingLists !== undefined) updateData.target_contact_lists = finalSanitizedLists;
+      if (selectedLists !== undefined) updateData.target_contact_lists = sanitizedLists;
       if (messageContent !== undefined) updateData.message = messageContent;
       if (channel !== undefined) updateData.channel = channel;
       if (scheduled_time !== undefined) updateData.scheduled_time = scheduled_time;
