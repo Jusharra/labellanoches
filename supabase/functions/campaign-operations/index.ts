@@ -119,15 +119,33 @@ Deno.serve(async (req) => {
         const scheduledDate = campaign.scheduled_time ? new Date(campaign.scheduled_time).toLocaleDateString() : '';
         const scheduleTime = campaign.scheduled_time ? new Date(campaign.scheduled_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
         
-        // Map target_contact_lists (array of UUIDs) to list names
-        const selectedListsNames = campaign.target_contact_lists
-          ? campaign.target_contact_lists.map((listId: string) => contactListMap.get(listId)).filter(Boolean).join(', ')
-          : 'N/A';
+        // Ensure status is always a string, default to 'draft' if null/undefined
+        const campaignStatus = campaign.status || 'draft';
+        
+        // Clean and map target_contact_lists (array of UUIDs) to list names
+        let selectedListsNames = 'N/A';
+        if (campaign.target_contact_lists && Array.isArray(campaign.target_contact_lists)) {
+          const cleanedListIds = campaign.target_contact_lists
+            .map((listId: any) => {
+              if (typeof listId === 'string') {
+                // Remove any surrounding quotes and trim whitespace
+                return listId.trim().replace(/^"+|"+$/g, '');
+              }
+              return null;
+            })
+            .filter((listId: any) => listId && UUID_REGEX.test(listId));
+          
+          const listNames = cleanedListIds
+            .map((listId: string) => contactListMap.get(listId))
+            .filter(Boolean);
+          
+          selectedListsNames = listNames.length > 0 ? listNames.join(', ') : 'N/A';
+        }
 
         return {
           id: campaign.id,
           name: campaign.title,
-          status: campaign.status,
+          status: campaignStatus,
           listName: selectedListsNames, 
           templateName: campaign.message_template || 'Custom Message', 
           scheduledDate: scheduledDate,
@@ -258,6 +276,64 @@ Deno.serve(async (req) => {
 
       if (updateError) {
         console.error('Error updating campaign:', updateError);
+        return new Response(
+          JSON.stringify({ success: false, error: updateError.message }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 },
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, data: updatedCampaign }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 },
+      );
+    } else if (action === 'update_campaign_details') {
+      const { campaign_id, name, selectedLists, messageContent, channel, scheduledDate, scheduleTime, mediaUrl, campaignType, templateName } = rest;
+
+      if (!campaign_id || !UUID_REGEX.test(campaign_id)) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Invalid or missing campaign ID' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 },
+        );
+      }
+
+      let scheduled_time = null;
+      if (scheduledDate && scheduleTime) {
+        scheduled_time = new Date(`${scheduledDate}T${scheduleTime}`).toISOString();
+      }
+
+      // Clean selectedLists array
+      const sanitizedLists = Array.isArray(selectedLists)
+        ? selectedLists
+            .map((id) => typeof id === 'string' ? id.trim().replace(/^"+|"+$/g, '') : null)
+            .filter((id) => id && UUID_REGEX.test(id))
+        : [];
+
+      const updateData: any = {};
+      if (name !== undefined) updateData.title = name;
+      if (selectedLists !== undefined) updateData.target_contact_lists = sanitizedLists;
+      if (messageContent !== undefined) updateData.message = messageContent;
+      if (channel !== undefined) updateData.channel = channel;
+      if (scheduled_time !== undefined) updateData.scheduled_time = scheduled_time;
+      if (mediaUrl !== undefined) updateData.media_url = mediaUrl;
+      if (campaignType !== undefined) updateData.campaign_type = campaignType;
+      if (templateName !== undefined) updateData.message_template = templateName;
+
+      // Update status based on scheduling
+      if (scheduled_time) {
+        updateData.status = 'scheduled';
+      } else if (scheduled_time === null && (scheduledDate === '' || scheduleTime === '')) {
+        updateData.status = 'draft';
+      }
+
+      const { data: updatedCampaign, error: updateError } = await supabaseClient
+        .from('campaigns')
+        .update(updateData)
+        .eq('id', campaign_id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('Error updating campaign details:', updateError);
         return new Response(
           JSON.stringify({ success: false, error: updateError.message }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 },

@@ -40,8 +40,8 @@ const Campaigns = () => {
   const [contactListsLoading, setContactListsLoading] = useState(true);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
+  const [showCampaignModal, setShowCampaignModal] = useState(false);
+  const [campaignModalMode, setCampaignModalMode] = useState<'create' | 'edit'>('create');
   const [showMediaModal, setShowMediaModal] = useState(false);
   const [mediaModalMode, setMediaModalMode] = useState<'select' | 'upload'>('select');
   
@@ -194,6 +194,48 @@ const Campaigns = () => {
     });
   };
 
+  // Reset form data to default values
+  const resetFormData = () => {
+    setFormData({
+      name: 'New Campaign',
+      selectedLists: [],
+      selectedTemplate: 'Welcome Message',
+      templateName: 'Welcome Message',
+      messageContent: 'Hi {{Name}}! Welcome to Bella Vista. Enjoy 10% off your first order with code WELCOME10. Reply STOP to opt out.',
+      channel: 'sms',
+      scheduledDate: '',
+      scheduleTime: '',
+      mediaUrl: '',
+      campaignType: 'Regular Campaign'
+    });
+  };
+
+  // Handle opening create modal
+  const handleOpenCreateModal = () => {
+    setCampaignModalMode('create');
+    resetFormData();
+    setShowCampaignModal(true);
+  };
+
+  // Handle opening edit modal
+  const handleEditCampaign = (campaign: Campaign) => {
+    setCampaignModalMode('edit');
+    setFormData({
+      name: campaign.name,
+      selectedLists: campaign.selectedLists || [],
+      selectedTemplate: campaign.templateName,
+      templateName: campaign.templateName,
+      messageContent: campaign.messageContent,
+      channel: campaign.channel,
+      scheduledDate: campaign.scheduledDate,
+      scheduleTime: campaign.scheduleTime,
+      mediaUrl: campaign.mediaUrl,
+      campaignType: campaign.campaignType
+    });
+    setSelectedCampaign(campaign);
+    setShowCampaignModal(true);
+  };
+
   // Handle campaign creation
   const handleCreateCampaign = async () => {
     if (!supabase || !isAuthenticated) {
@@ -235,19 +277,8 @@ const Campaigns = () => {
       if (data?.success) {
         console.log('✅ Campaign created successfully:', data.data);
         toast.success('Campaign created successfully!');
-        setShowCreateModal(false);
-        setFormData({
-          name: 'New Campaign',
-          selectedLists: [],
-          selectedTemplate: 'Welcome Message',
-          templateName: 'Welcome Message',
-          messageContent: 'Hi {{Name}}! Welcome to Bella Vista. Enjoy 10% off your first order with code WELCOME10. Reply STOP to opt out.',
-          channel: 'sms',
-          scheduledDate: '',
-          scheduleTime: '',
-          mediaUrl: '',
-          campaignType: 'Regular Campaign'
-        });
+        setShowCampaignModal(false);
+        resetFormData();
         fetchCampaigns(); // Refresh campaigns
       } else {
         console.error('❌ API error:', data?.error);
@@ -256,6 +287,61 @@ const Campaigns = () => {
     } catch (error) {
       console.error('❌ Error creating campaign:', error);
       toast.error(`Failed to create campaign: ${error.message}`);
+    }
+  };
+
+  // Handle campaign update
+  const handleUpdateCampaign = async () => {
+    if (!supabase || !isAuthenticated || !selectedCampaign) {
+      toast.error('Authentication required to update campaigns');
+      return;
+    }
+
+    if (!formData.name.trim() || !formData.messageContent.trim()) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    console.log('⏳ Updating campaign...');
+    try {
+      const { data, error } = await supabase.functions.invoke('campaign-operations', {
+        body: {
+          action: 'update_campaign_details',
+          campaign_id: selectedCampaign.id,
+          name: formData.name,
+          selectedLists: formData.selectedLists,
+          selectedTemplate: formData.selectedTemplate,
+          templateName: formData.templateName,
+          messageContent: formData.messageContent,
+          channel: formData.channel,
+          scheduledDate: formData.scheduledDate,
+          scheduleTime: formData.scheduleTime,
+          mediaUrl: formData.mediaUrl,
+          campaignType: formData.campaignType
+        }
+      });
+
+      console.log('📦 Update campaign response:', { data, error });
+
+      if (error) {
+        console.error('❌ Campaign update error:', error);
+        throw new Error(`Function error: ${error.message}`);
+      }
+      
+      if (data?.success) {
+        console.log('✅ Campaign updated successfully:', data.data);
+        toast.success('Campaign updated successfully!');
+        setShowCampaignModal(false);
+        setSelectedCampaign(null);
+        resetFormData();
+        fetchCampaigns(); // Refresh campaigns
+      } else {
+        console.error('❌ API error:', data?.error);
+        throw new Error(data?.error || 'Failed to update campaign');
+      }
+    } catch (error) {
+      console.error('❌ Error updating campaign:', error);
+      toast.error(`Failed to update campaign: ${error.message}`);
     }
   };
 
@@ -452,7 +538,7 @@ const Campaigns = () => {
             <RefreshCw className="h-4 w-4" />
           </button>
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={handleOpenCreateModal}
             className="flex items-center px-3 sm:px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm sm:text-base"
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -475,7 +561,7 @@ const Campaigns = () => {
             Create your first campaign to start reaching your customers via SMS and WhatsApp.
           </p>
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={handleOpenCreateModal}
             className="inline-flex items-center px-3 sm:px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm sm:text-base"
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -566,7 +652,16 @@ const Campaigns = () => {
                         >
                           <Eye className="h-4 w-4" />
                         </button>
-                        {campaign.status === 'draft' && (
+                        {(campaign.status === 'draft' || campaign.status === 'scheduled') && (
+                          <button
+                            onClick={() => handleEditCampaign(campaign)}
+                            className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
+                            title="Edit campaign"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </button>
+                        )}
+                        {(campaign.status === 'draft' || campaign.status === 'scheduled') && (
                           <button
                             onClick={() => handleSendCampaign(campaign.id)}
                             className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 transition-colors"
@@ -592,8 +687,8 @@ const Campaigns = () => {
         </div>
       )}
 
-      {/* Create Campaign Modal */}
-      {showCreateModal && (
+      {/* Campaign Modal (Create/Edit) */}
+      {showCampaignModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto p-4">
           <div className="flex items-center justify-center min-h-screen">
             <div className="fixed inset-0 transition-opacity" aria-hidden="true">
@@ -603,7 +698,7 @@ const Campaigns = () => {
             <div className="inline-block w-full max-w-4xl bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all align-middle">
               <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6">
                 <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-4">
-                  Create New Campaign
+                  {campaignModalMode === 'create' ? 'Create New Campaign' : 'Edit Campaign'}
                 </h3>
                 
                 <div className="space-y-4 sm:space-y-6 max-h-96 sm:max-h-none overflow-y-auto">
@@ -803,13 +898,17 @@ const Campaigns = () => {
               
               <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 flex flex-col sm:flex-row-reverse space-y-2 sm:space-y-0 sm:space-x-3 sm:space-x-reverse">
                 <button
-                  onClick={handleCreateCampaign}
+                  onClick={campaignModalMode === 'create' ? handleCreateCampaign : handleUpdateCampaign}
                   className="w-full sm:w-auto inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary text-sm sm:text-base font-medium text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
                 >
-                  Create Campaign
+                  {campaignModalMode === 'create' ? 'Create Campaign' : 'Update Campaign'}
                 </button>
                 <button
-                  onClick={() => setShowCreateModal(false)}
+                  onClick={() => {
+                    setShowCampaignModal(false);
+                    setSelectedCampaign(null);
+                    resetFormData();
+                  }}
                   className="w-full sm:w-auto inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-sm sm:text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
                   Cancel
