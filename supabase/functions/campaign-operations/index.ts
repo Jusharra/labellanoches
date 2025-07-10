@@ -63,6 +63,9 @@ Deno.serve(async (req) => {
   );
 
   try {
+    // Common UUID validation regex
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    
     if (action === 'get_campaigns') {
       // Fetch campaigns
       const { data: campaigns, error: campaignsError } = await supabaseClient
@@ -148,18 +151,50 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 },
       );
     } else if (action === 'create_campaign') {
-      const { name, selectedLists, messageContent, channel, scheduledDate, scheduleTime, mediaUrl, campaignType, templateName } = rest;
+      const { name, selectedLists, messageContent, channel, scheduledDate, scheduleTime, mediaUrl, campaignType, templateName, user_id } = rest;
+      
+      // Validate user_id
+      if (!user_id || !UUID_REGEX.test(user_id)) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Invalid or missing user ID' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 },
+        );
+      }
+      
+      // Get user profile to determine business_id
+      const { data: userProfile, error: userProfileError } = await supabaseClient
+        .from('user_profiles')
+        .select('id, business_id, role')
+        .eq('id', user_id)
+        .single();
+        
+      if (userProfileError) {
+        console.error('Error fetching user profile:', userProfileError);
+        return new Response(
+          JSON.stringify({ success: false, error: `Failed to fetch user profile: ${userProfileError.message}` }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 },
+        );
+      }
+      
+      // Check if user has a business_id
+      if (!userProfile.business_id) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'User does not have an associated business' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 },
+        );
+      }
 
       let scheduled_time = null;
       if (scheduledDate && scheduleTime) {
         scheduled_time = new Date(`${scheduledDate}T${scheduleTime}`).toISOString();
       }
 
-      // Placeholder UUIDs for business_id and created_by.
-      // In a production app, these should be dynamically retrieved from the authenticated user's session
-      // or a business context.
-      const placeholderBusinessId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'; 
-      const placeholderCreatedBy = 'df4f18aa-6d39-4e87-91aa-a584979e3867'; 
+      // Clean selectedLists array
+      const sanitizedLists = Array.isArray(selectedLists)
+        ? selectedLists
+            .map((id) => typeof id === 'string' ? id.trim().replace(/^"+|"+$/g, '') : null)
+            .filter((id) => id && UUID_REGEX.test(id))
+        : [];
 
       const { data: newCampaign, error: insertError } = await supabaseClient
         .from('campaigns')
@@ -173,8 +208,8 @@ Deno.serve(async (req) => {
           campaign_type: campaignType,
           message_template: templateName,
           status: scheduled_time ? 'scheduled' : 'draft', 
-          business_id: placeholderBusinessId, 
-          created_by: placeholderCreatedBy 
+          business_id: userProfile.business_id, 
+          created_by: user_id
         })
         .select()
         .single();

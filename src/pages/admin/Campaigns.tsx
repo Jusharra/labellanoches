@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { useTemplates } from '../../components/AdminLayout';
 import CampaignAnalyticsModal from '../../components/CampaignAnalyticsModal';
 import { useSupabase } from '../../context/SupabaseContext';
+import { useAuth } from '../../context/AuthContext';
 
 interface Campaign {
   id: string;
@@ -29,6 +30,7 @@ interface Campaign {
 const Campaigns = () => {
   const { templates } = useTemplates();
   const { supabase, isLoading: supabaseLoading, isAuthenticated } = useSupabase();
+  const { user } = useAuth();
   
   // State management
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -186,6 +188,7 @@ const Campaigns = () => {
       const { data, error } = await supabase.functions.invoke('campaign-operations', {
         body: {
           action: 'create_campaign',
+          user_id: user?.id, // Pass the user ID to the Edge Function
           name: formData.name,
           selectedLists: formData.selectedLists,
           selectedTemplate: formData.selectedTemplate,
