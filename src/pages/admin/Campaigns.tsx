@@ -5,6 +5,7 @@ import { useTemplates } from '../../components/AdminLayout';
 import CampaignAnalyticsModal from '../../components/CampaignAnalyticsModal';
 import { useSupabase } from '../../context/SupabaseContext';
 import { useAuth } from '../../context/AuthContext';
+import MediaLibraryModal from '../../components/MediaLibraryModal';
 
 interface Campaign {
   id: string;
@@ -41,6 +42,8 @@ const Campaigns = () => {
   const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showMediaModal, setShowMediaModal] = useState(false);
+  const [mediaModalMode, setMediaModalMode] = useState<'select' | 'upload'>('select');
   
   // Form state for campaign creation/editing
   const [formData, setFormData] = useState({
@@ -159,6 +162,26 @@ const Campaigns = () => {
       templateName: template.name,
       messageContent: template.content
     });
+  };
+  
+  // Handle media selection from MediaLibraryModal
+  const handleMediaSelect = (url: string) => {
+    setFormData({
+      ...formData,
+      mediaUrl: url
+    });
+  };
+
+  // Open media selection modal
+  const handleOpenMediaSelect = () => {
+    setMediaModalMode('select');
+    setShowMediaModal(true);
+  };
+
+  // Open media upload modal
+  const handleOpenMediaUpload = () => {
+    setMediaModalMode('upload');
+    setShowMediaModal(true);
   };
 
   // Handle contact list selection
@@ -729,12 +752,14 @@ const Campaigns = () => {
                         placeholder="https://images.pexels.com/photos/1640772/pexels-"
                       />
                       <button
+                        onClick={handleOpenMediaSelect}
                         type="button"
                         className="hidden sm:block px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm"
                       >
                         📎 Select
                       </button>
                       <button
+                        onClick={handleOpenMediaUpload}
                         type="button"
                         className="hidden sm:block px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm"
                       >
@@ -803,6 +828,15 @@ const Campaigns = () => {
             setShowAnalyticsModal(false);
             setSelectedCampaign(null);
           }}
+        />
+      )}
+      
+      {/* Media Library Modal */}
+      {showMediaModal && (
+        <MediaLibraryModal
+          onClose={() => setShowMediaModal(false)}
+          onSelect={handleMediaSelect}
+          mode={mediaModalMode}
         />
       )}
     </div>
