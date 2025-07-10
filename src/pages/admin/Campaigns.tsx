@@ -59,7 +59,22 @@ const Campaigns = () => {
     campaignType: 'Regular Campaign'
   });
 
-  // Fetch campaigns from Supabase Edge Function
+  // Helper function to sanitize UUID arrays
+  const sanitizeUUIDArray = (input: any): string[] => {
+    if (!input || !Array.isArray(input)) return [];
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return input
+      .map((id) => {
+        if (typeof id === 'string') {
+          const cleaned = id.replace(/^["']+|["']+$/g, '').trim();
+          return uuidRegex.test(cleaned) ? cleaned : null;
+        }
+        return null;
+      })
+      .filter(Boolean) as string[];
+  };
+
+  // Fetch campaigns from Supabase directly
   const fetchCampaigns = async () => {
     if (!supabase || !isAuthenticated) {
       console.warn('⚠️ Supabase not initialized or user not authenticated');
@@ -69,27 +84,93 @@ const Campaigns = () => {
     console.log('⏳ Starting campaign fetch...');
     try {
       setLoading(true);
-      console.log('📡 Invoking campaign-operations function...');
       
-      // Use supabase.functions.invoke instead of manual fetch
-      const { data, error } = await supabase.functions.invoke('campaign-operations', {
-        body: { action: 'get_campaigns' }
+      // Fetch campaigns
+      const { data: campaignsData, error: campaignsError } = await supabase
+        .from('campaigns')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (campaignsError) {
+        console.error('❌ Error fetching campaigns:', campaignsError);
+        throw new Error(`Failed to fetch campaigns: ${campaignsError.message}`);
+      }
+
+      // Fetch contact lists to map list IDs to names
+      const { data: contactListsData, error: contactListsError } = await supabase
+        .from('contact_lists')
+        .select('id, list_name');
+
+      if (contactListsError) {
+        console.error('❌ Error fetching contact lists:', contactListsError);
+        throw new Error(`Failed to fetch contact lists: ${contactListsError.message}`);
+      }
+
+      const contactListMap = new Map(contactListsData.map(list => [list.id, list.list_name]));
+
+      // Fetch campaign logs to calculate sentCount
+      const { data: campaignLogsData, error: campaignLogsError } = await supabase
+        .from('campaign_logs')
+        .select('campaign_id, status');
+
+      if (campaignLogsError) {
+        console.error('❌ Error fetching campaign logs:', campaignLogsError);
+        // Don't throw error, just set empty logs
+        console.warn('Campaign logs not available, sentCount will be 0');
+      }
+
+      const sentCounts = new Map<string, number>();
+      if (campaignLogsData) {
+        campaignLogsData.forEach(log => {
+          if (log.status === 'sent' || log.status === 'delivered') { 
+            sentCounts.set(log.campaign_id, (sentCounts.get(log.campaign_id) || 0) + 1);
+          }
+        });
+      }
+
+      const formattedCampaigns = campaignsData.map((campaign: any) => {
+        const scheduledDate = campaign.scheduled_time ? new Date(campaign.scheduled_time).toLocaleDateString() : '';
+        const scheduleTime = campaign.scheduled_time ? new Date(campaign.scheduled_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+        
+        // Ensure status is always a string, default to 'draft' if null/undefined
+        const campaignStatus = campaign.status || 'draft';
+        
+        // Clean and map target_contact_lists (array of UUIDs) to list names
+        let selectedListsNames = 'N/A';
+        if (campaign.target_contact_lists && Array.isArray(campaign.target_contact_lists)) {
+          const cleanedListIds = sanitizeUUIDArray(campaign.target_contact_lists);
+          
+          const listNames = cleanedListIds
+            .map((listId: string) => contactListMap.get(listId))
+            .filter(Boolean);
+          
+          selectedListsNames = listNames.length > 0 ? listNames.join(', ') : 'N/A';
+        }
+
+        return {
+          id: campaign.id,
+          name: campaign.title || 'Untitled Campaign',
+          status: campaignStatus,
+          listName: selectedListsNames, 
+          templateName: campaign.message_template || 'Custom Message', 
+          scheduledDate: scheduledDate,
+          sentCount: sentCounts.get(campaign.id) || 0, 
+          openRate: 'N/A', // Placeholder, as 'opened' status is not in schema
+          createdDate: new Date(campaign.created_at).toLocaleDateString(),
+          campaignType: campaign.campaign_type || 'Regular Campaign',
+          business: 'La Bella Noches', // Placeholder, ideally fetched from user's business
+          selectedLists: sanitizeUUIDArray(campaign.target_contact_lists) || [],
+          templateId: 'N/A', // Not directly available from DB, can be derived if needed
+          channel: campaign.channel || 'sms',
+          scheduleTime: scheduleTime,
+          mediaUrl: campaign.media_url || '',
+          messageContent: campaign.message || '',
+          webhookUrl: campaign.webhook_url,
+        };
       });
-      
-      console.log('📦 Function response:', { data, error });
-      
-      if (error) {
-        console.error('❌ Supabase function error:', error);
-        throw new Error(`Function error: ${error.message}`);
-      }
-      
-      if (data?.success) {
-        console.log('✅ Successfully loaded campaigns:', data.data);
-        setCampaigns(data.data || []);
-      } else {
-        console.error('❌ API error:', data?.error);
-        throw new Error(data?.error || 'Failed to fetch campaigns');
-      }
+
+      console.log('✅ Successfully loaded campaigns:', formattedCampaigns);
+      setCampaigns(formattedCampaigns);
     } catch (error) {
       console.error('❌ Error fetching campaigns:', error);
       toast.error(`Failed to load campaigns: ${error.message}`);
@@ -110,32 +191,51 @@ const Campaigns = () => {
     console.log('⏳ Starting contact lists fetch...');
     try {
       setContactListsLoading(true);
-      console.log('📡 Invoking contact-list-operations function...');
       
-      // Use supabase.functions.invoke instead of manual fetch
-      const { data, error } = await supabase.functions.invoke('contact-list-operations', {
-        body: { action: 'get_lists' }
-      });
-      
-      console.log('📦 Contact lists response:', { data, error });
-      
-      if (error) {
-        console.error('❌ Supabase function error:', error);
-        throw new Error(`Function error: ${error.message}`);
+      // Fetch contact lists
+      const { data: contactListsData, error: contactListsError } = await supabase
+        .from('contact_lists')
+        .select(`
+          id,
+          list_name,
+          description,
+          created_at
+        `)
+        .order('created_at', { ascending: false });
+
+      if (contactListsError) {
+        console.error('❌ Error fetching contact lists:', contactListsError);
+        throw new Error(`Failed to fetch contact lists: ${contactListsError.message}`);
       }
-      
-      if (data?.success) {
-        console.log('✅ Successfully loaded contact lists:', data.data);
-        // Clean up any double-quoted UUIDs before setting state
-        const cleanedLists = (data.data || []).map(list => ({
-          ...list,
-          id: typeof list.id === 'string' ? list.id.replace(/"/g, '') : list.id
-        }));
-        setContactLists(cleanedLists);
-      } else {
-        console.error('❌ API error:', data?.error);
-        throw new Error(data?.error || 'Failed to fetch contact lists');
+
+      // Fetch contact list members to count contacts per list
+      const { data: contactListMembersData, error: contactListMembersError } = await supabase
+        .from('contact_list_members')
+        .select('contact_list_id');
+
+      if (contactListMembersError) {
+        console.error('❌ Error fetching contact list members:', contactListMembersError);
+        // Don't throw error, just set empty members
+        console.warn('Contact list members not available, contactCount will be 0');
       }
+
+      const contactCounts = new Map<string, number>();
+      if (contactListMembersData) {
+        contactListMembersData.forEach(member => {
+          contactCounts.set(member.contact_list_id, (contactCounts.get(member.contact_list_id) || 0) + 1);
+        });
+      }
+
+      const formattedContactLists = contactListsData.map((list: any) => ({
+        id: list.id,
+        name: list.list_name,
+        description: list.description || '',
+        contactCount: contactCounts.get(list.id) || 0,
+        createdDate: new Date(list.created_at).toLocaleDateString(),
+      }));
+
+      console.log('✅ Successfully loaded contact lists:', formattedContactLists);
+      setContactLists(formattedContactLists);
     } catch (error) {
       console.error('❌ Error fetching contact lists:', error);
       toast.error(`Failed to load contact lists: ${error.message}`);
@@ -238,7 +338,7 @@ const Campaigns = () => {
 
   // Handle campaign creation
   const handleCreateCampaign = async () => {
-    if (!supabase || !isAuthenticated) {
+    if (!supabase || !isAuthenticated || !user) {
       toast.error('Authentication required to create campaigns');
       return;
     }
@@ -250,40 +350,72 @@ const Campaigns = () => {
 
     console.log('⏳ Creating campaign...');
     try {
-      const { data, error } = await supabase.functions.invoke('campaign-operations', {
-        body: {
-          action: 'create_campaign',
-          user_id: user?.id, // Pass the user ID to the Edge Function
-          name: formData.name,
-          selectedLists: formData.selectedLists,
-          selectedTemplate: formData.selectedTemplate,
-          templateName: formData.templateName,
-          messageContent: formData.messageContent,
-          channel: formData.channel,
-          scheduledDate: formData.scheduledDate,
-          scheduleTime: formData.scheduleTime,
-          mediaUrl: formData.mediaUrl,
-          campaignType: formData.campaignType
-        }
-      });
-
-      console.log('📦 Create campaign response:', { data, error });
-
-      if (error) {
-        console.error('❌ Campaign creation error:', error);
-        throw new Error(`Function error: ${error.message}`);
+      // Get user's business_id
+      const { data: userProfile, error: userProfileError } = await supabase
+        .from('user_profiles')
+        .select('business_id')
+        .eq('id', user.id)
+        .single();
+        
+      if (userProfileError) {
+        console.error('❌ Error fetching user profile:', userProfileError);
+        throw new Error(`Failed to fetch user profile: ${userProfileError.message}`);
       }
       
-      if (data?.success) {
-        console.log('✅ Campaign created successfully:', data.data);
-        toast.success('Campaign created successfully!');
-        setShowCampaignModal(false);
-        resetFormData();
-        fetchCampaigns(); // Refresh campaigns
-      } else {
-        console.error('❌ API error:', data?.error);
-        throw new Error(data?.error || 'Failed to create campaign');
+      if (!userProfile.business_id) {
+        throw new Error('User does not have an associated business');
       }
+
+      // Get business settings
+      const { data: business, error: businessError } = await supabase
+        .from('businesses')
+        .select('webhook_url, twilio_number')
+        .eq('id', userProfile.business_id)
+        .single();
+        
+      if (businessError) {
+        console.error('❌ Error fetching business settings:', businessError);
+        throw new Error(`Failed to fetch business settings: ${businessError.message}`);
+      }
+
+      let scheduled_time = null;
+      if (formData.scheduledDate && formData.scheduleTime) {
+        scheduled_time = new Date(`${formData.scheduledDate}T${formData.scheduleTime}`).toISOString();
+      }
+
+      // Clean selectedLists array
+      const sanitizedLists = sanitizeUUIDArray(formData.selectedLists);
+
+      const { data: newCampaign, error: insertError } = await supabase
+        .from('campaigns')
+        .insert({
+          title: formData.name,
+          target_contact_lists: sanitizedLists,
+          message: formData.messageContent,
+          channel: formData.channel,
+          scheduled_time: scheduled_time,
+          media_url: formData.mediaUrl || null,
+          campaign_type: formData.campaignType,
+          message_template: formData.templateName,
+          status: scheduled_time ? 'scheduled' : 'draft', 
+          business_id: userProfile.business_id, 
+          created_by: user.id,
+          webhook_url: business.webhook_url,
+          from_number: business.twilio_number
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('❌ Error creating campaign:', insertError);
+        throw new Error(`Failed to create campaign: ${insertError.message}`);
+      }
+
+      console.log('✅ Campaign created successfully:', newCampaign);
+      toast.success('Campaign created successfully!');
+      setShowCampaignModal(false);
+      resetFormData();
+      fetchCampaigns(); // Refresh campaigns
     } catch (error) {
       console.error('❌ Error creating campaign:', error);
       toast.error(`Failed to create campaign: ${error.message}`);
@@ -304,41 +436,76 @@ const Campaigns = () => {
 
     console.log('⏳ Updating campaign...');
     try {
-      const { data, error } = await supabase.functions.invoke('campaign-operations', {
-        body: {
-          action: 'update_campaign_details',
-          campaign_id: selectedCampaign.id,
-          name: formData.name,
-          selectedLists: formData.selectedLists,
-          selectedTemplate: formData.selectedTemplate,
-          templateName: formData.templateName,
-          messageContent: formData.messageContent,
-          channel: formData.channel,
-          scheduledDate: formData.scheduledDate,
-          scheduleTime: formData.scheduleTime,
-          mediaUrl: formData.mediaUrl,
-          campaignType: formData.campaignType
-        }
-      });
-
-      console.log('📦 Update campaign response:', { data, error });
-
-      if (error) {
-        console.error('❌ Campaign update error:', error);
-        throw new Error(`Function error: ${error.message}`);
+      // Get the campaign's business_id to fetch business settings
+      const { data: campaign, error: campaignError } = await supabase
+        .from('campaigns')
+        .select('business_id')
+        .eq('id', selectedCampaign.id)
+        .single();
+        
+      if (campaignError) {
+        console.error('❌ Error fetching campaign:', campaignError);
+        throw new Error(`Failed to fetch campaign: ${campaignError.message}`);
       }
       
-      if (data?.success) {
-        console.log('✅ Campaign updated successfully:', data.data);
-        toast.success('Campaign updated successfully!');
-        setShowCampaignModal(false);
-        setSelectedCampaign(null);
-        resetFormData();
-        fetchCampaigns(); // Refresh campaigns
-      } else {
-        console.error('❌ API error:', data?.error);
-        throw new Error(data?.error || 'Failed to update campaign');
+      // Fetch business settings
+      const { data: business, error: businessError } = await supabase
+        .from('businesses')
+        .select('webhook_url, twilio_number')
+        .eq('id', campaign.business_id)
+        .single();
+        
+      if (businessError) {
+        console.error('❌ Error fetching business settings:', businessError);
+        throw new Error(`Failed to fetch business settings: ${businessError.message}`);
       }
+
+      let scheduled_time = null;
+      if (formData.scheduledDate && formData.scheduleTime) {
+        scheduled_time = new Date(`${formData.scheduledDate}T${formData.scheduleTime}`).toISOString();
+      }
+
+      // Clean selectedLists array
+      const sanitizedLists = sanitizeUUIDArray(formData.selectedLists);
+
+      const updateData: any = {
+        title: formData.name,
+        target_contact_lists: sanitizedLists,
+        message: formData.messageContent,
+        channel: formData.channel,
+        scheduled_time: scheduled_time,
+        media_url: formData.mediaUrl || null,
+        campaign_type: formData.campaignType,
+        message_template: formData.templateName,
+        webhook_url: business.webhook_url,
+        from_number: business.twilio_number
+      };
+
+      // Update status based on scheduling
+      if (scheduled_time) {
+        updateData.status = 'scheduled';
+      } else if (scheduled_time === null && (formData.scheduledDate === '' || formData.scheduleTime === '')) {
+        updateData.status = 'draft';
+      }
+
+      const { data: updatedCampaign, error: updateError } = await supabase
+        .from('campaigns')
+        .update(updateData)
+        .eq('id', selectedCampaign.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('❌ Error updating campaign:', updateError);
+        throw new Error(`Failed to update campaign: ${updateError.message}`);
+      }
+
+      console.log('✅ Campaign updated successfully:', updatedCampaign);
+      toast.success('Campaign updated successfully!');
+      setShowCampaignModal(false);
+      setSelectedCampaign(null);
+      resetFormData();
+      fetchCampaigns(); // Refresh campaigns
     } catch (error) {
       console.error('❌ Error updating campaign:', error);
       toast.error(`Failed to update campaign: ${error.message}`);
@@ -361,28 +528,19 @@ const Campaigns = () => {
 
     console.log('⏳ Deleting campaign:', campaignId);
     try {
-      const { data, error } = await supabase.functions.invoke('campaign-operations', {
-        body: {
-          action: 'delete_campaign',
-          campaign_id: campaignId
-        }
-      });
+      const { error: deleteError } = await supabase
+        .from('campaigns')
+        .delete()
+        .eq('id', campaignId);
 
-      console.log('📦 Delete campaign response:', { data, error });
+      if (deleteError) {
+        console.error('❌ Error deleting campaign:', deleteError);
+        throw new Error(`Failed to delete campaign: ${deleteError.message}`);
+      }
 
-      if (error) {
-        console.error('❌ Campaign deletion error:', error);
-        throw new Error(`Function error: ${error.message}`);
-      }
-      
-      if (data?.success) {
-        console.log('✅ Campaign deleted successfully');
-        toast.success('Campaign deleted successfully!');
-        fetchCampaigns(); // Refresh campaigns
-      } else {
-        console.error('❌ API error:', data?.error);
-        throw new Error(data?.error || 'Failed to delete campaign');
-      }
+      console.log('✅ Campaign deleted successfully');
+      toast.success('Campaign deleted successfully!');
+      fetchCampaigns(); // Refresh campaigns
     } catch (error) {
       console.error('❌ Error deleting campaign:', error);
       toast.error(`Failed to delete campaign: ${error.message}`);
@@ -405,29 +563,21 @@ const Campaigns = () => {
 
     console.log('⏳ Sending campaign:', campaignId);
     try {
-      const { data, error } = await supabase.functions.invoke('campaign-operations', {
-        body: {
-          action: 'update_campaign',
-          campaign_id: campaignId,
-          status: 'sending'
-        }
-      });
+      const { data: updatedCampaign, error: updateError } = await supabase
+        .from('campaigns')
+        .update({ status: 'sending' })
+        .eq('id', campaignId)
+        .select()
+        .single();
 
-      console.log('📦 Send campaign response:', { data, error });
+      if (updateError) {
+        console.error('❌ Error sending campaign:', updateError);
+        throw new Error(`Failed to send campaign: ${updateError.message}`);
+      }
 
-      if (error) {
-        console.error('❌ Campaign sending error:', error);
-        throw new Error(`Function error: ${error.message}`);
-      }
-      
-      if (data?.success) {
-        console.log('✅ Campaign sent successfully');
-        toast.success('Campaign is being sent!');
-        fetchCampaigns(); // Refresh campaigns
-      } else {
-        console.error('❌ API error:', data?.error);
-        throw new Error(data?.error || 'Failed to send campaign');
-      }
+      console.log('✅ Campaign sent successfully');
+      toast.success('Campaign is being sent!');
+      fetchCampaigns(); // Refresh campaigns
     } catch (error) {
       console.error('❌ Error sending campaign:', error);
       toast.error(`Failed to send campaign: ${error.message}`);

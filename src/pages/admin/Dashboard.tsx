@@ -8,7 +8,7 @@ const Dashboard = () => {
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch campaigns from Supabase Edge Function
+  // Fetch campaigns from Supabase directly
   useEffect(() => {
     const fetchCampaigns = async () => {
       if (!supabase || !isAuthenticated) {
@@ -20,41 +20,52 @@ const Dashboard = () => {
       console.log('⏳ Dashboard: Starting campaign fetch...');
       try {
         setLoading(true);
-        console.log('📡 Dashboard: Invoking campaign-operations function...');
         
-        // Use supabase.functions.invoke with better error handling
-        const { data, error } = await supabase.functions.invoke('campaign-operations', {
-          body: { action: 'get_campaigns' },
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
+        // Fetch campaigns directly from the table
+        const { data: campaignsData, error: campaignsError } = await supabase
+          .from('campaigns')
+          .select('*')
+          .order('created_at', { ascending: false });
         
-        console.log('📦 Dashboard: Function response:', { data, error });
-        
-        if (error) {
-          console.error('❌ Dashboard: Supabase function error:', error);
-          // Check if this is a connection error
-          if (error.message.includes('Failed to send a request to the Edge Function')) {
-            throw new Error('Unable to connect to Edge Function. Please ensure the function is properly configured and running.');
-          }
-          throw new Error(`Function error: ${error.message}`);
+        if (campaignsError) {
+          console.error('❌ Dashboard: Error fetching campaigns:', campaignsError);
+          throw new Error(`Failed to fetch campaigns: ${campaignsError.message}`);
         }
         
-        if (data?.success) {
-          console.log('✅ Dashboard: Successfully loaded campaigns:', data.data);
-          setCampaigns(data.data || []);
-        } else {
-          console.error('❌ Dashboard: API error:', data?.error, data?.details);
-          const errorMessage = data?.error || 'Failed to fetch campaigns';
-          const details = data?.details ? ` Details: ${JSON.stringify(data.details)}` : '';
-          throw new Error(`${errorMessage}${details}`);
+        // Fetch campaign logs to calculate sentCount
+        const { data: campaignLogsData, error: campaignLogsError } = await supabase
+          .from('campaign_logs')
+          .select('campaign_id, status');
+
+        if (campaignLogsError) {
+          console.error('❌ Dashboard: Error fetching campaign logs:', campaignLogsError);
+          // Don't throw error, just log warning
+          console.warn('Campaign logs not available, sentCount will be 0');
         }
+
+        const sentCounts = new Map<string, number>();
+        if (campaignLogsData) {
+          campaignLogsData.forEach(log => {
+            if (log.status === 'sent' || log.status === 'delivered') { 
+              sentCounts.set(log.campaign_id, (sentCounts.get(log.campaign_id) || 0) + 1);
+            }
+          });
+        }
+
+        const formattedCampaigns = campaignsData.map((campaign: any) => ({
+          id: campaign.id,
+          name: campaign.title || 'Untitled Campaign',
+          status: campaign.status || 'draft',
+          sentCount: sentCounts.get(campaign.id) || 0,
+          scheduledDate: campaign.scheduled_time ? new Date(campaign.scheduled_time).toLocaleDateString() : '',
+          createdDate: campaign.created_at ? new Date(campaign.created_at).toLocaleDateString() : ''
+        }));
+        
+        console.log('✅ Dashboard: Successfully loaded campaigns:', formattedCampaigns);
+        setCampaigns(formattedCampaigns);
       } catch (error) {
         console.error('❌ Dashboard: Error fetching campaigns:', error);
-        const errorMessage = error.message.includes('Edge Function') 
-          ? 'Database connection issue. Please check your configuration.' 
-          : `Failed to load campaigns: ${error.message}`;
+        const errorMessage = 'Failed to load dashboard data. Please try refreshing the page.';
         toast.error(errorMessage);
         setCampaigns([]);
       } finally {

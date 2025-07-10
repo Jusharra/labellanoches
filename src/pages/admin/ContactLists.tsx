@@ -1,14 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Edit, Trash2, Users, RefreshCw } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
+import { useSupabase } from '../../context/SupabaseContext';
+import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
-
-// Initialize Supabase client
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
 
 interface ContactList {
   id: string;
@@ -20,6 +15,9 @@ interface ContactList {
 
 const ContactLists = () => {
   const navigate = useNavigate();
+  const { supabase, isLoading: supabaseLoading, isAuthenticated } = useSupabase();
+  const { user } = useAuth();
+  
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -35,33 +33,60 @@ const ContactLists = () => {
 
   const [contactLists, setContactLists] = useState<ContactList[]>([]);
 
-  // Fetch contact lists on component mount
-  useEffect(() => {
-    fetchContactLists();
-  }, []);
-
+  // Fetch contact lists directly from Supabase
   const fetchContactLists = async () => {
+    if (!supabase || !isAuthenticated) {
+      console.warn('⚠️ Supabase not initialized or user not authenticated');
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/contact-list-operations/lists`, {
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      // Fetch contact lists
+      const { data: contactListsData, error: contactListsError } = await supabase
+        .from('contact_lists')
+        .select(`
+          id,
+          list_name,
+          description,
+          created_at
+        `)
+        .order('created_at', { ascending: false });
+
+      if (contactListsError) {
+        console.error('❌ Error fetching contact lists:', contactListsError);
+        throw new Error(`Failed to fetch contact lists: ${contactListsError.message}`);
       }
-      
-      const data = await response.json();
-      
-      if (data?.success) {
-        setContactLists(data.data);
-      } else {
-        throw new Error(data?.error || 'Failed to fetch contact lists');
+
+      // Fetch contact list members to count contacts per list
+      const { data: contactListMembersData, error: contactListMembersError } = await supabase
+        .from('contact_list_members')
+        .select('contact_list_id');
+
+      if (contactListMembersError) {
+        console.error('❌ Error fetching contact list members:', contactListMembersError);
+        // Don't throw error, just set empty members
+        console.warn('Contact list members not available, contactCount will be 0');
       }
+
+      const contactCounts = new Map<string, number>();
+      if (contactListMembersData) {
+        contactListMembersData.forEach(member => {
+          contactCounts.set(member.contact_list_id, (contactCounts.get(member.contact_list_id) || 0) + 1);
+        });
+      }
+
+      const formattedContactLists = contactListsData.map((list: any) => ({
+        id: list.id,
+        name: list.list_name,
+        description: list.description || '',
+        contactCount: contactCounts.get(list.id) || 0,
+        createdDate: new Date(list.created_at).toLocaleDateString(),
+      }));
+      
+      setContactLists(formattedContactLists);
     } catch (error) {
       console.error('Error fetching contact lists:', error);
       toast.error('Failed to load contact lists. Please try again.');
@@ -70,44 +95,71 @@ const ContactLists = () => {
     }
   };
 
+  // Fetch contact lists on component mount
+  useEffect(() => {
+    if (supabase && isAuthenticated && !supabaseLoading) {
+      fetchContactLists();
+    } else {
+      setLoading(false);
+    }
+  }, [supabase, isAuthenticated, supabaseLoading]);
+
   const handleCreateList = async () => {
-    if (newListName.trim()) {
-      try {
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/contact-list-operations/lists`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name: newListName,
-            description: newListDescription
-          })
-        });
+    if (!newListName.trim()) {
+      toast.error('Please enter a list name');
+      return;
+    }
+
+    if (!supabase || !isAuthenticated || !user) {
+      toast.error('Authentication required to create contact lists');
+      return;
+    }
+
+    try {
+      // Get user's business_id
+      const { data: userProfile, error: userProfileError } = await supabase
+        .from('user_profiles')
+        .select('business_id')
+        .eq('id', user.id)
+        .single();
         
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        
-        if (data?.success) {
-          console.log('Created contact list:', data.data);
-          
-          // Refresh the lists
-          await fetchContactLists();
-          
-          setNewListName('');
-          setNewListDescription('');
-          setShowCreateModal(false);
-          toast.success('Contact list created successfully!');
-        } else {
-          throw new Error(data?.error || 'Failed to create contact list');
-        }
-      } catch (error) {
-        console.error('Error creating contact list:', error);
-        toast.error('Failed to create contact list. Please try again.');
+      if (userProfileError) {
+        console.error('❌ Error fetching user profile:', userProfileError);
+        throw new Error(`Failed to fetch user profile: ${userProfileError.message}`);
       }
+      
+      if (!userProfile.business_id) {
+        throw new Error('User does not have an associated business');
+      }
+
+      const { data: newList, error: insertError } = await supabase
+        .from('contact_lists')
+        .insert({
+          list_name: newListName,
+          description: newListDescription || null,
+          business_id: userProfile.business_id,
+          created_by: user.id
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('❌ Error creating contact list:', insertError);
+        throw new Error(`Failed to create contact list: ${insertError.message}`);
+      }
+
+      console.log('✅ Created contact list:', newList);
+      
+      // Refresh the lists
+      await fetchContactLists();
+      
+      setNewListName('');
+      setNewListDescription('');
+      setShowCreateModal(false);
+      toast.success('Contact list created successfully!');
+    } catch (error) {
+      console.error('Error creating contact list:', error);
+      toast.error(`Failed to create contact list: ${error.message}`);
     }
   };
 
@@ -133,75 +185,77 @@ const ContactLists = () => {
   };
 
   const handleUpdateList = async () => {
-    if (editListData.name.trim()) {
-      try {
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/contact-list-operations/lists/${editListData.id}`, {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name: editListData.name,
-            description: editListData.description
-          })
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        
-        if (data?.success) {
-          console.log('Updated contact list:', data.data);
-          
-          // Refresh the lists
-          await fetchContactLists();
-          
-          setShowEditModal(false);
-          toast.success('Contact list updated successfully!');
-        } else {
-          throw new Error(data?.error || 'Failed to update contact list');
-        }
-      } catch (error) {
-        console.error('Error updating contact list:', error);
-        toast.error('Failed to update contact list. Please try again.');
+    if (!editListData.name.trim()) {
+      toast.error('Please enter a list name');
+      return;
+    }
+
+    if (!supabase || !isAuthenticated) {
+      toast.error('Authentication required to update contact lists');
+      return;
+    }
+
+    try {
+      const { data: updatedList, error: updateError } = await supabase
+        .from('contact_lists')
+        .update({
+          list_name: editListData.name,
+          description: editListData.description || null
+        })
+        .eq('id', editListData.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('❌ Error updating contact list:', updateError);
+        throw new Error(`Failed to update contact list: ${updateError.message}`);
       }
+
+      console.log('✅ Updated contact list:', updatedList);
+      
+      // Refresh the lists
+      await fetchContactLists();
+      
+      setShowEditModal(false);
+      toast.success('Contact list updated successfully!');
+    } catch (error) {
+      console.error('Error updating contact list:', error);
+      toast.error(`Failed to update contact list: ${error.message}`);
     }
   };
 
   const handleDeleteList = async (listId: string) => {
     const list = contactLists.find(l => l.id === listId);
-    if (list && window.confirm(`Are you sure you want to delete "${list.name}"? This action cannot be undone and will remove ${list.contactCount} contacts from this list.`)) {
-      try {
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/contact-list-operations/lists/${listId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-          }
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        
-        if (data?.success) {
-          console.log('Deleted contact list:', listId);
-          
-          // Refresh the lists
-          await fetchContactLists();
-          toast.success('Contact list deleted successfully!');
-        } else {
-          throw new Error(data?.error || 'Failed to delete contact list');
-        }
-      } catch (error) {
-        console.error('Error deleting contact list:', error);
-        toast.error('Failed to delete contact list. Please try again.');
+    if (!list) return;
+
+    if (!window.confirm(`Are you sure you want to delete "${list.name}"? This action cannot be undone and will remove ${list.contactCount} contacts from this list.`)) {
+      return;
+    }
+
+    if (!supabase || !isAuthenticated) {
+      toast.error('Authentication required to delete contact lists');
+      return;
+    }
+
+    try {
+      const { error: deleteError } = await supabase
+        .from('contact_lists')
+        .delete()
+        .eq('id', listId);
+
+      if (deleteError) {
+        console.error('❌ Error deleting contact list:', deleteError);
+        throw new Error(`Failed to delete contact list: ${deleteError.message}`);
       }
+
+      console.log('✅ Deleted contact list:', listId);
+      
+      // Refresh the lists
+      await fetchContactLists();
+      toast.success('Contact list deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting contact list:', error);
+      toast.error(`Failed to delete contact list: ${error.message}`);
     }
   };
 
@@ -211,6 +265,49 @@ const ContactLists = () => {
       [field]: value
     }));
   };
+
+  if (supabaseLoading || !supabase) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Contact Lists</h1>
+            <p className="mt-2 text-gray-600 dark:text-gray-300">
+              Initializing authentication...
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Contact Lists</h1>
+            <p className="mt-2 text-gray-600 dark:text-gray-300">
+              Please sign in to manage contact lists
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+              Authentication Required
+            </h3>
+            <p className="text-gray-500 dark:text-gray-400">
+              Please sign in to access contact list management.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
