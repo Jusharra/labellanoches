@@ -207,7 +207,7 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 },
       );
     } else if (action === 'create_campaign') {
-      const { name, selectedLists, messageContent, channel, scheduledDate, scheduleTime, mediaUrl, campaignType, templateName, user_id } = rest;
+      const { name, sanitizedLists: incomingLists, messageContent, channel, scheduledDate, scheduleTime, mediaUrl, campaignType, templateName, user_id } = rest;
       
       // Validate user_id
       if (!user_id || !sanitizeUUID(user_id)) {
@@ -260,14 +260,14 @@ Deno.serve(async (req) => {
         scheduled_time = new Date(`${scheduledDate}T${scheduleTime}`).toISOString();
       }
 
-      // Clean selectedLists array using utility function
-      const sanitizedLists = sanitizeUUIDArray(selectedLists);
+      // Clean the incoming lists array using utility function
+      const finalSanitizedLists = sanitizeUUIDArray(incomingLists);
 
       const { data: newCampaign, error: insertError } = await supabaseClient
         .from('campaigns')
         .insert({
           title: name,
-          target_contact_lists: sanitizedLists,
+          target_contact_lists: finalSanitizedLists,
           message: messageContent,
           channel: channel,
           scheduled_time: scheduled_time,
@@ -354,7 +354,7 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 },
       );
     } else if (action === 'update_campaign_details') {
-      const { campaign_id, name, selectedLists, messageContent, channel, scheduledDate, scheduleTime, mediaUrl, campaignType, templateName } = rest;
+      const { campaign_id, name, sanitizedLists: incomingLists, messageContent, channel, scheduledDate, scheduleTime, mediaUrl, campaignType, templateName } = rest;
 
       if (!campaign_id || !sanitizeUUID(campaign_id)) {
         return new Response(
@@ -398,12 +398,12 @@ Deno.serve(async (req) => {
         scheduled_time = new Date(`${scheduledDate}T${scheduleTime}`).toISOString();
       }
 
-      // Clean selectedLists array using utility function
-      const sanitizedLists = sanitizeUUIDArray(selectedLists);
+      // Clean the incoming lists array using utility function
+      const finalSanitizedLists = sanitizeUUIDArray(incomingLists);
 
       const updateData: any = {};
       if (name !== undefined) updateData.title = name;
-      if (selectedLists !== undefined) updateData.target_contact_lists = sanitizedLists;
+      if (incomingLists !== undefined) updateData.target_contact_lists = finalSanitizedLists;
       if (messageContent !== undefined) updateData.message = messageContent;
       if (channel !== undefined) updateData.channel = channel;
       if (scheduled_time !== undefined) updateData.scheduled_time = scheduled_time;
