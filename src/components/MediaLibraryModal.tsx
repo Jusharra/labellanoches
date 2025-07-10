@@ -27,6 +27,15 @@ const MediaLibraryModal: React.FC<MediaLibraryModalProps> = ({ onClose, onSelect
   const [uploadProgress, setUploadProgress] = useState(0);
   const [businessId, setBusinessId] = useState<string | null>(null);
 
+  // Helper function to sanitize and validate UUIDs
+  const sanitizeUUID = (input: string): string | null => {
+    if (typeof input !== 'string') return null;
+    const cleaned = input.replace(/['"]/g, '').trim();
+    if (cleaned === '') return null; // Convert empty strings to null
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(cleaned) ? cleaned : null;
+  };
+
   // Fetch user's business_id when component mounts
   useEffect(() => {
     const fetchBusinessId = async () => {
@@ -136,6 +145,15 @@ const MediaLibraryModal: React.FC<MediaLibraryModalProps> = ({ onClose, onSelect
       return;
     }
     
+    // Sanitize UUIDs to ensure no empty strings are passed
+    const cleanBusinessId = sanitizeUUID(businessId);
+    const cleanUserId = sanitizeUUID(user?.id || '');
+    
+    if (!cleanBusinessId) {
+      toast.error('Invalid business information. Please try again.');
+      return;
+    }
+    
     setUploading(true);
     
     try {
@@ -171,11 +189,11 @@ const MediaLibraryModal: React.FC<MediaLibraryModalProps> = ({ onClose, onSelect
       const { data: mediaData, error: mediaError } = await supabase
         .from('media_library')
         .insert({
-          business_id: businessId,
+          business_id: cleanBusinessId,
           title: title,
           link: urlData.publicUrl,
-          access_type: 'Free', // Default to free
-          created_by: user?.id
+          access_type: 'free', // Default to free
+          created_by: cleanUserId
         })
         .select()
         .single();
