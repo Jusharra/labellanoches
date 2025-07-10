@@ -38,14 +38,39 @@ const Settings = () => {
   }, [supabase, isAuthenticated]);
 
   const loadBusinessSettings = async () => {
+    if (!user) {
+      console.log('No user found, cannot load business settings');
+      return;
+    }
+
     try {
-      console.log('Loading business settings from database...');
+      console.log('Loading business settings for user:', user.id);
       
-      // Query the businesses table directly
+      // First, get the user's profile to find their business_id
+      const { data: userProfile, error: userProfileError } = await supabase
+        .from('user_profiles')
+        .select('business_id')
+        .eq('id', user.id)
+        .single();
+      
+      if (userProfileError) {
+        console.error('Error fetching user profile:', userProfileError);
+        // If user profile doesn't exist, we'll use default settings
+        console.log('User profile not found, using default settings');
+        return;
+      }
+      
+      // If user has no business_id, use default settings
+      if (!userProfile.business_id) {
+        console.log('User has no associated business_id, using default settings');
+        return;
+      }
+      
+      // Query the businesses table using the user's business_id
       const { data: business, error } = await supabase
         .from('businesses')
         .select('*')
-        .eq('name', 'La Bella Noches')
+        .eq('id', userProfile.business_id)
         .maybeSingle();
       
       if (error && !(error.code === 'PGRST116' && !business)) {
@@ -55,7 +80,7 @@ const Settings = () => {
       }
       
       if (business) {
-        console.log('Business settings loaded:', business);
+        console.log('Business settings loaded for business:', business.id);
         
         // Map database fields to settings state
         setSettings(prev => ({
@@ -69,7 +94,7 @@ const Settings = () => {
           twilioNumber: business.twilio_number || ''
         }));
       } else {
-        console.log('No business record found, using default settings');
+        console.log('No business record found for business_id:', userProfile.business_id);
       }
     } catch (error) {
       console.error('Error loading business settings:', error);
@@ -88,6 +113,18 @@ const Settings = () => {
     try {
       console.log('Saving business settings...');
       
+      // First, get the user's current profile to check for existing business_id
+      const { data: userProfile, error: userProfileError } = await supabase
+        .from('user_profiles')
+        .select('business_id')
+        .eq('id', user.id)
+        .single();
+      
+      if (userProfileError && userProfileError.code !== 'PGRST116') {
+        console.error('Error fetching user profile:', userProfileError);
+        throw new Error(`Failed to fetch user profile: ${userProfileError.message}`);
+      }
+      
       // Map settings state to database columns
       const updatePayload = {
         name: settings.businessName,
@@ -99,22 +136,27 @@ const Settings = () => {
         twilio_number: settings.twilioNumber && settings.twilioNumber.trim() !== '' ? settings.twilioNumber : null
       };
 
-      // Try to update existing business record
-      const { data: updatedBusiness, error: updateError } = await supabase
-        .from('businesses')
-        .update(updatePayload)
-        .eq('name', 'La Bella Noches')
-        .select()
-        .maybeSingle();
+      let businessId = userProfile?.business_id;
+      
+      if (businessId) {
+        // Update existing business record
+        console.log('Updating existing business:', businessId);
+        const { data: updatedBusiness, error: updateError } = await supabase
+          .from('businesses')
+          .update(updatePayload)
+          .eq('id', businessId)
+          .select()
+          .single();
 
-      if (updateError) {
-        console.error('Error updating business:', updateError);
-        throw new Error(`Failed to update business settings: ${updateError.message}`);
-      }
+        if (updateError) {
+          console.error('Error updating business:', updateError);
+          throw new Error(`Failed to update business settings: ${updateError.message}`);
+        }
 
-      // If no record was updated, create a new one
-      if (!updatedBusiness) {
-        console.log('No existing business record found, creating new one...');
+        console.log('Business record updated:', updatedBusiness);
+      } else {
+        // Create new business record
+        console.log('Creating new business record...');
         
         const insertPayload = {
           ...updatePayload,
@@ -137,9 +179,33 @@ const Settings = () => {
           throw new Error(`Failed to create business record: ${insertError.message}`);
         }
 
+        businessId = newBusiness.id;
         console.log('New business record created:', newBusiness);
-      } else {
-        console.log('Business record updated:', updatedBusiness);
+      }
+      
+      // Ensure user_profiles table has the correct business_id
+      if (businessId && (!userProfile?.business_id || userProfile.business_id !== businessId)) {
+        console.log('Updating user profile with business_id:', businessId);
+        const { error: profileUpdateError } = await supabase
+          .from('user_profiles')
+          .upsert({
+            id: user.id,
+            business_id: businessId,
+            email: user.email,
+            // Keep existing role if any
+            role: userProfile?.role || 'admin'
+          }, {
+            onConflict: 'id'
+          });
+        
+        if (profileUpdateError) {
+          console.error('Error updating user profile:', profileUpdateError);
+          // Don't throw here as business was saved successfully
+          toast.error('Business saved but failed to link to your profile. Please contact support.');
+          return;
+        }
+        
+        console.log('User profile updated with business_id');
       }
 
       setSaved(true);
