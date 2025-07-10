@@ -192,7 +192,7 @@ Deno.serve(async (req) => {
           createdDate: new Date(campaign.created_at).toLocaleDateString(),
           campaignType: campaign.campaign_type,
           business: 'La Bella Noches', // Placeholder, ideally fetched from user's business
-          selectedLists: campaign.target_contact_lists || [],
+          sanatizedLists: campaign.target_contact_lists || [],
           templateId: 'N/A', // Not directly available from DB, can be derived if needed
           channel: campaign.channel,
           scheduleTime: scheduleTime,
@@ -207,7 +207,7 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 },
       );
     } else if (action === 'create_campaign') {
-      const { name, selectedLists, messageContent, channel, scheduledDate, scheduleTime, mediaUrl, campaignType, templateName, user_id } = rest;
+      const { name, sanatizedLists, messageContent, channel, scheduledDate, scheduleTime, mediaUrl, campaignType, templateName, user_id } = rest;
       
       // Validate user_id
       if (!user_id || !sanitizeUUID(user_id)) {
@@ -354,7 +354,7 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 },
       );
     } else if (action === 'update_campaign_details') {
-      const { campaign_id, name, selectedLists, messageContent, channel, scheduledDate, scheduleTime, mediaUrl, campaignType, templateName } = rest;
+      const { campaign_id, name, sanatizedLists, messageContent, channel, scheduledDate, scheduleTime, mediaUrl, campaignType, templateName } = rest;
 
       if (!campaign_id || !sanitizeUUID(campaign_id)) {
         return new Response(
