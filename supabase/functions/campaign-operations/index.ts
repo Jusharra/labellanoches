@@ -6,6 +6,24 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, PUT, DELETE',
 };
 
+// Utility function to sanitize UUID arrays by removing invalid or badly formatted UUIDs
+function sanitizeUUIDArray(input: any): string[] {
+  if (!input || !Array.isArray(input)) return [];
+
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  
+  return input
+    .map((id) => {
+      if (typeof id === 'string') {
+        // Remove surrounding quotes and trim whitespace
+        const cleaned = id.replace(/"/g, '').trim();
+        return uuidRegex.test(cleaned) ? cleaned : null;
+      }
+      return null;
+    })
+    .filter(Boolean) as string[];
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -125,15 +143,7 @@ Deno.serve(async (req) => {
         // Clean and map target_contact_lists (array of UUIDs) to list names
         let selectedListsNames = 'N/A';
         if (campaign.target_contact_lists && Array.isArray(campaign.target_contact_lists)) {
-          const cleanedListIds = campaign.target_contact_lists
-            .map((listId: any) => {
-              if (typeof listId === 'string') {
-                // Remove any surrounding quotes and trim whitespace
-                return listId.trim().replace(/^"+|"+$/g, '');
-              }
-              return null;
-            })
-            .filter((listId: any) => listId && UUID_REGEX.test(listId));
+          const cleanedListIds = sanitizeUUIDArray(campaign.target_contact_lists);
           
           const listNames = cleanedListIds
             .map((listId: string) => contactListMap.get(listId))
@@ -222,12 +232,8 @@ Deno.serve(async (req) => {
         scheduled_time = new Date(`${scheduledDate}T${scheduleTime}`).toISOString();
       }
 
-      // Clean selectedLists array
-      const sanitizedLists = Array.isArray(selectedLists)
-        ? selectedLists
-            .map((id) => typeof id === 'string' ? id.trim().replace(/^"+|"+$/g, '') : null)
-            .filter((id) => id && UUID_REGEX.test(id))
-        : [];
+      // Clean selectedLists array using utility function
+      const sanitizedLists = sanitizeUUIDArray(selectedLists);
 
       const { data: newCampaign, error: insertError } = await supabaseClient
         .from('campaigns')
@@ -348,12 +354,8 @@ Deno.serve(async (req) => {
         scheduled_time = new Date(`${scheduledDate}T${scheduleTime}`).toISOString();
       }
 
-      // Clean selectedLists array
-      const sanitizedLists = Array.isArray(selectedLists)
-        ? selectedLists
-            .map((id) => typeof id === 'string' ? id.trim().replace(/^"+|"+$/g, '') : null)
-            .filter((id) => id && UUID_REGEX.test(id))
-        : [];
+      // Clean selectedLists array using utility function
+      const sanitizedLists = sanitizeUUIDArray(selectedLists);
 
       const updateData: any = {};
       if (name !== undefined) updateData.title = name;
