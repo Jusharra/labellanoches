@@ -66,7 +66,7 @@ const Campaigns = () => {
     return input
       .map((id) => {
         if (typeof id === 'string') {
-          const cleaned = id.replace(/^["']+|["']+$/g, '').trim();
+          const cleaned = id.replace(/['"]/g, '').trim();
           return uuidRegex.test(cleaned) ? cleaned : null;
         }
         return null;
