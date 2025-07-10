@@ -6,6 +6,11 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, PUT, DELETE',
 };
 
+// Helper function to strip leading and trailing quotes (both single and double)
+function stripQuotes(str: string): string {
+  return str.replace(/^["']+|["']+$/g, '');
+}
+
 // Utility function to sanitize UUID arrays by removing invalid or badly formatted UUIDs
 function sanitizeUUIDArray(input: any): string[] {
   if (!input || !Array.isArray(input)) return [];
@@ -15,13 +20,23 @@ function sanitizeUUIDArray(input: any): string[] {
   return input
     .map((id) => {
       if (typeof id === 'string') {
-        // Remove surrounding quotes and trim whitespace
-        const cleaned = id.replace(/"/g, '').trim();
+        // Strip leading/trailing quotes and trim whitespace
+        const cleaned = stripQuotes(id.trim());
         return uuidRegex.test(cleaned) ? cleaned : null;
       }
       return null;
     })
     .filter(Boolean) as string[];
+}
+
+// Helper function to sanitize a single UUID string
+function sanitizeUUID(id: any): string | null {
+  if (typeof id === 'string') {
+    const cleaned = stripQuotes(id.trim());
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(cleaned) ? cleaned : null;
+  }
+  return null;
 }
 
 Deno.serve(async (req) => {
@@ -182,7 +197,7 @@ Deno.serve(async (req) => {
       const { name, selectedLists, messageContent, channel, scheduledDate, scheduleTime, mediaUrl, campaignType, templateName, user_id } = rest;
       
       // Validate user_id
-      if (!user_id || !UUID_REGEX.test(user_id)) {
+      if (!user_id || !sanitizeUUID(user_id)) {
         return new Response(
           JSON.stringify({ success: false, error: 'Invalid or missing user ID' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 },
@@ -270,6 +285,14 @@ Deno.serve(async (req) => {
     } else if (action === 'delete_campaign') {
       const { campaign_id } = rest;
 
+      // Validate campaign_id
+      if (!campaign_id || !sanitizeUUID(campaign_id)) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Invalid or missing campaign ID' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 },
+        );
+      }
+
       const { error: deleteError } = await supabaseClient
         .from('campaigns')
         .delete()
@@ -289,6 +312,14 @@ Deno.serve(async (req) => {
       );
     } else if (action === 'update_campaign') {
       const { campaign_id, status } = rest; 
+
+      // Validate campaign_id
+      if (!campaign_id || !sanitizeUUID(campaign_id)) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Invalid or missing campaign ID' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 },
+        );
+      }
 
       const { data: updatedCampaign, error: updateError } = await supabaseClient
         .from('campaigns')
@@ -312,7 +343,7 @@ Deno.serve(async (req) => {
     } else if (action === 'update_campaign_details') {
       const { campaign_id, name, selectedLists, messageContent, channel, scheduledDate, scheduleTime, mediaUrl, campaignType, templateName } = rest;
 
-      if (!campaign_id || !UUID_REGEX.test(campaign_id)) {
+      if (!campaign_id || !sanitizeUUID(campaign_id)) {
         return new Response(
           JSON.stringify({ success: false, error: 'Invalid or missing campaign ID' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 },
