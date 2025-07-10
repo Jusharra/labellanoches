@@ -8,7 +8,7 @@ const corsHeaders = {
 
 // Helper function to strip leading and trailing quotes (both single and double)
 function stripQuotes(str: string): string {
-  return str.replace(/^["']+|["']+$/g, '');
+  return str.replace(/["']/g, '');
 }
 
 // Utility function to sanitize UUID arrays by removing invalid or badly formatted UUIDs
