@@ -108,23 +108,6 @@ const Campaigns = () => {
     return listNames.length > 0 ? listNames.join(', ') : 'N/A';
   };
 
-  // Helper function to create target_contact_lists object from selectedLists array
-  const createTargetContactListsObject = (selectedListIds: string[], contactLists: any[]): object => {
-    const result: { [key: string]: string } = {};
-    
-    selectedListIds.forEach(listId => {
-      const cleanedId = sanitizeUUID(listId);
-      if (cleanedId) {
-        const list = contactLists.find(l => l.id === cleanedId);
-        if (list) {
-          result[cleanedId] = list.name;
-        }
-      }
-    });
-    
-    return result;
-  };
-
   // Fetch campaigns from Supabase directly
   const fetchCampaigns = async () => {
     if (!supabase || !isAuthenticated) {
@@ -428,14 +411,11 @@ const Campaigns = () => {
         scheduled_time = new Date(`${formData.scheduledDate}T${formData.scheduleTime}`).toISOString();
       }
 
-      // Convert selectedLists array to target_contact_lists object
-      const targetContactListsObject = createTargetContactListsObject(formData.selectedLists, contactLists);
-
       const { data: newCampaign, error: insertError } = await supabase
         .from('campaigns')
         .insert({
           title: formData.name,
-          target_contact_lists: targetContactListsObject,
+          target_contact_lists: formData.selectedLists,
           message: formData.messageContent,
           channel: formData.channel,
           scheduled_time: scheduled_time,
@@ -510,12 +490,9 @@ const Campaigns = () => {
         scheduled_time = new Date(`${formData.scheduledDate}T${formData.scheduleTime}`).toISOString();
       }
 
-      // Convert selectedLists array to target_contact_lists object
-      const targetContactListsObject = createTargetContactListsObject(formData.selectedLists, contactLists);
-
       const updateData: any = {
         title: formData.name,
-        target_contact_lists: targetContactListsObject,
+        target_contact_lists: formData.selectedLists,
         message: formData.messageContent,
         channel: formData.channel,
         scheduled_time: scheduled_time,
