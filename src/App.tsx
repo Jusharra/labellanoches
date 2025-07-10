@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import ErrorBoundary from './components/ErrorBoundary';
 import AdminProtectedRoute from './components/AdminProtectedRoute';
 import AdminLayout from './components/AdminLayout';
 import Layout from './components/Layout';
@@ -24,40 +25,43 @@ import ProfileSettings from './pages/admin/ProfileSettings';
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        {/* Authentication Routes */}
-        <Route path="/sign-in/*" element={<SignInPage />} />
-        <Route path="/sign-up/*" element={<SignUpPage />} />
-        <Route path="/forgot-password/*" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        
-        {/* Public Routes */}
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Home />} />
-          <Route path="menu" element={<Menu />} />
-          <Route path="about" element={<About />} />
-          <Route path="contact" element={<Contact />} />
-          <Route path="terms" element={<TermsOfService />} />
-          <Route path="privacy" element={<PrivacyPolicy />} />
-        </Route>
-        
-        {/* Admin Routes */}
-        <Route path="/admin" element={
-          <AdminProtectedRoute>
-            <AdminLayout />
-          </AdminProtectedRoute>
-        }>
-          <Route index element={<Dashboard />} />
-          <Route path="contacts" element={<Contacts />} />
-          <Route path="contact-lists" element={<ContactLists />} />
-          <Route path="templates" element={<Templates />} />
-          <Route path="campaigns" element={<Campaigns />} />
-          <Route path="menu-manager" element={<MenuManager />} />
-          <Route path="settings" element={<Settings />} />
-        </Route>
-      </Routes>
-    </Router>
+    <ErrorBoundary>
+      <Router>
+        <Routes>
+          {/* Authentication Routes */}
+          <Route path="/sign-in/*" element={<SignInPage />} />
+          <Route path="/sign-up/*" element={<SignUpPage />} />
+          <Route path="/forgot-password/*" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          
+          {/* Public Routes */}
+          <Route path="/" element={<Layout />}>
+            <Route index element={<Home />} />
+            <Route path="menu" element={<Menu />} />
+            <Route path="about" element={<About />} />
+            <Route path="contact" element={<Contact />} />
+            <Route path="terms" element={<TermsOfService />} />
+            <Route path="privacy" element={<PrivacyPolicy />} />
+          </Route>
+          
+          {/* Admin Routes */}
+          <Route path="/admin" element={
+            <AdminProtectedRoute>
+              <AdminLayout />
+            </AdminProtectedRoute>
+          }>
+            <Route index element={<Dashboard />} />
+            <Route path="contacts" element={<Contacts />} />
+            <Route path="contact-lists" element={<ContactLists />} />
+            <Route path="templates" element={<Templates />} />
+            <Route path="campaigns" element={<Campaigns />} />
+            <Route path="menu-manager" element={<MenuManager />} />
+            <Route path="settings" element={<Settings />} />
+            <Route path="profile-settings" element={<ProfileSettings />} />
+          </Route>
+        </Routes>
+      </Router>
+    </ErrorBoundary>
   );
 }
 
