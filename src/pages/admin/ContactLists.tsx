@@ -33,6 +33,15 @@ const ContactLists = () => {
 
   const [contactLists, setContactLists] = useState<ContactList[]>([]);
 
+  // Helper function to sanitize and validate UUIDs
+  const sanitizeUUID = (input: string): string | null => {
+    if (typeof input !== 'string') return null;
+    const cleaned = input.replace(/['"]/g, '').trim();
+    if (cleaned === '') return null; // Convert empty strings to null
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(cleaned) ? cleaned : null;
+  };
+
   // Fetch contact lists directly from Supabase
   const fetchContactLists = async () => {
     if (!supabase || !isAuthenticated) {
@@ -132,13 +141,21 @@ const ContactLists = () => {
         throw new Error('User does not have an associated business');
       }
 
+      // Sanitize UUIDs to ensure no empty strings are passed
+      const cleanBusinessId = sanitizeUUID(userProfile.business_id);
+      const cleanUserId = sanitizeUUID(user.id);
+      
+      if (!cleanBusinessId || !cleanUserId) {
+        throw new Error('Invalid user or business information');
+      }
+
       const { data: newList, error: insertError } = await supabase
         .from('contact_lists')
         .insert({
           list_name: newListName,
           description: newListDescription || null,
-          business_id: userProfile.business_id,
-          created_by: user.id
+          business_id: cleanBusinessId,
+          created_by: cleanUserId
         })
         .select()
         .single();

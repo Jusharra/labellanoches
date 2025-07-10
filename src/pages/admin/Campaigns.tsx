@@ -63,6 +63,7 @@ const Campaigns = () => {
   const sanitizeUUID = (input: string): string | null => {
     if (typeof input !== 'string') return null;
     const cleaned = input.replace(/['"]/g, '').trim();
+    if (cleaned === '') return null; // Convert empty strings to null
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     return uuidRegex.test(cleaned) ? cleaned : null;
   };
@@ -394,6 +395,14 @@ const Campaigns = () => {
         throw new Error('User does not have an associated business');
       }
 
+      // Sanitize UUIDs to ensure no empty strings are passed
+      const cleanBusinessId = sanitizeUUID(userProfile.business_id);
+      const cleanUserId = sanitizeUUID(user.id);
+      
+      if (!cleanBusinessId || !cleanUserId) {
+        throw new Error('Invalid user or business information');
+      }
+
       // Get business settings
       const { data: business, error: businessError } = await supabase
         .from('businesses')
@@ -432,8 +441,8 @@ const Campaigns = () => {
           campaign_type: formData.campaignType,
           message_template: formData.templateName,
           status: scheduled_time ? 'scheduled' : 'draft', 
-          business_id: userProfile.business_id, 
-          created_by: user.id,
+          business_id: cleanBusinessId, 
+          created_by: cleanUserId,
           webhook_url: business.webhook_url,
           from_number: business.twilio_number
         })
