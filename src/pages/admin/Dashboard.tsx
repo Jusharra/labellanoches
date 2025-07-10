@@ -22,15 +22,22 @@ const Dashboard = () => {
         setLoading(true);
         console.log('📡 Dashboard: Invoking campaign-operations function...');
         
-        // Use supabase.functions.invoke instead of manual fetch
+        // Use supabase.functions.invoke with better error handling
         const { data, error } = await supabase.functions.invoke('campaign-operations', {
-          body: { action: 'get_campaigns' }
+          body: { action: 'get_campaigns' },
+          headers: {
+            'Content-Type': 'application/json',
+          },
         });
         
         console.log('📦 Dashboard: Function response:', { data, error });
         
         if (error) {
           console.error('❌ Dashboard: Supabase function error:', error);
+          // Check if this is a connection error
+          if (error.message.includes('Failed to send a request to the Edge Function')) {
+            throw new Error('Unable to connect to Edge Function. Please ensure the function is properly configured and running.');
+          }
           throw new Error(`Function error: ${error.message}`);
         }
         
@@ -38,12 +45,17 @@ const Dashboard = () => {
           console.log('✅ Dashboard: Successfully loaded campaigns:', data.data);
           setCampaigns(data.data || []);
         } else {
-          console.error('❌ Dashboard: API error:', data?.error);
-          throw new Error(data?.error || 'Failed to fetch campaigns');
+          console.error('❌ Dashboard: API error:', data?.error, data?.details);
+          const errorMessage = data?.error || 'Failed to fetch campaigns';
+          const details = data?.details ? ` Details: ${JSON.stringify(data.details)}` : '';
+          throw new Error(`${errorMessage}${details}`);
         }
       } catch (error) {
         console.error('❌ Dashboard: Error fetching campaigns:', error);
-        toast.error(`Failed to load campaigns: ${error.message}`);
+        const errorMessage = error.message.includes('Edge Function') 
+          ? 'Database connection issue. Please check your configuration.' 
+          : `Failed to load campaigns: ${error.message}`;
+        toast.error(errorMessage);
         setCampaigns([]);
       } finally {
         console.log('🏁 Dashboard: Campaign fetch completed');
