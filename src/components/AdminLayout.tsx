@@ -205,6 +205,7 @@ const AdminLayout = () => {
     { name: 'Campaigns', href: '/admin/campaigns', icon: Send },
     { name: 'Menu Manager', href: '/admin/menu-manager', icon: UtensilsCrossed },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
+    { name: 'Profile Settings', href: '/admin/profile-settings', icon: User },
   ];
 
   const isActive = (path: string) => {

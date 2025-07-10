@@ -20,6 +20,7 @@ import Templates from './pages/admin/Templates';
 import Campaigns from './pages/admin/Campaigns';
 import MenuManager from './pages/admin/MenuManager';
 import Settings from './pages/admin/Settings';
+import ProfileSettings from './pages/admin/ProfileSettings';
 
 function App() {
   return (
