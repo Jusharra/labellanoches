@@ -74,6 +74,17 @@ export const SupabaseProvider: React.FC<SupabaseProviderProps> = ({ children }) 
         
         if (error) {
           console.error('❌ Error getting initial session:', error);
+          
+          // Handle invalid refresh token by signing out
+          if (error.message && error.message.includes('Invalid Refresh Token')) {
+            console.log('🔄 Invalid refresh token detected, signing out...');
+            await supabase.auth.signOut();
+            setSession(null);
+            setUser(null);
+            setUserRole(null);
+            setIsLoading(false);
+            return;
+          }
         } else {
           console.log('✅ Initial session loaded:', session ? 'authenticated' : 'not authenticated');
           setSession(session);
@@ -88,6 +99,15 @@ export const SupabaseProvider: React.FC<SupabaseProviderProps> = ({ children }) 
         }
       } catch (error) {
         console.error('❌ Error in getInitialSession:', error);
+        
+        // Handle invalid refresh token in catch block as well
+        if (error instanceof Error && error.message && error.message.includes('Invalid Refresh Token')) {
+          console.log('🔄 Invalid refresh token detected in catch, signing out...');
+          await supabase.auth.signOut();
+          setSession(null);
+          setUser(null);
+          setUserRole(null);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -99,6 +119,15 @@ export const SupabaseProvider: React.FC<SupabaseProviderProps> = ({ children }) 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('🔄 Auth state changed:', event, session ? 'authenticated' : 'not authenticated');
+        
+        // Handle sign out event or invalid session
+        if (event === 'SIGNED_OUT' || !session) {
+          setSession(null);
+          setUser(null);
+          setUserRole(null);
+          setIsLoading(false);
+          return;
+        }
         
         setSession(session);
         setUser(session?.user ?? null);
