@@ -121,7 +121,12 @@ const Campaigns = () => {
       
       if (data?.success) {
         console.log('✅ Successfully loaded contact lists:', data.data);
-        setContactLists(data.data || []);
+        // Clean up any double-quoted UUIDs before setting state
+        const cleanedLists = (data.data || []).map(list => ({
+          ...list,
+          id: typeof list.id === 'string' ? list.id.replace(/^"|"$/g, '') : list.id
+        }));
+        setContactLists(cleanedLists);
       } else {
         console.error('❌ API error:', data?.error);
         throw new Error(data?.error || 'Failed to fetch contact lists');
