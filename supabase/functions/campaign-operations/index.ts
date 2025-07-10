@@ -237,7 +237,8 @@ Deno.serve(async (req) => {
       const { name, selectedLists, messageContent, channel, scheduledDate, scheduleTime, mediaUrl, campaignType, templateName, user_id } = rest;
       
       // Validate user_id
-      if (!user_id || !sanitizeUUID(user_id)) {
+      const cleanUserId = sanitizeUUID(user_id);
+      if (!cleanUserId) {
         return new Response(
           JSON.stringify({ success: false, error: 'Invalid or missing user ID' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 },
@@ -248,7 +249,7 @@ Deno.serve(async (req) => {
       const { data: userProfile, error: userProfileError } = await supabaseClient
         .from('user_profiles')
         .select('id, business_id, role')
-        .eq('id', user_id)
+        .eq('id', cleanUserId)
         .single();
         
       if (userProfileError) {
@@ -303,7 +304,7 @@ Deno.serve(async (req) => {
           message_template: templateName,
           status: scheduled_time ? 'scheduled' : 'draft', 
           business_id: userProfile.business_id, 
-          created_by: user_id,
+          created_by: cleanUserId,
           webhook_url: business.webhook_url,
           from_number: business.twilio_number
         })
@@ -326,7 +327,8 @@ Deno.serve(async (req) => {
       const { campaign_id } = rest;
 
       // Validate campaign_id
-      if (!campaign_id || !sanitizeUUID(campaign_id)) {
+      const cleanCampaignId = sanitizeUUID(campaign_id);
+      if (!cleanCampaignId) {
         return new Response(
           JSON.stringify({ success: false, error: 'Invalid or missing campaign ID' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 },
@@ -336,7 +338,7 @@ Deno.serve(async (req) => {
       const { error: deleteError } = await supabaseClient
         .from('campaigns')
         .delete()
-        .eq('id', campaign_id);
+        .eq('id', cleanCampaignId);
 
       if (deleteError) {
         console.error('Error deleting campaign:', deleteError);
@@ -354,7 +356,8 @@ Deno.serve(async (req) => {
       const { campaign_id, status } = rest; 
 
       // Validate campaign_id
-      if (!campaign_id || !sanitizeUUID(campaign_id)) {
+      const cleanCampaignId = sanitizeUUID(campaign_id);
+      if (!cleanCampaignId) {
         return new Response(
           JSON.stringify({ success: false, error: 'Invalid or missing campaign ID' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 },
@@ -364,7 +367,7 @@ Deno.serve(async (req) => {
       const { data: updatedCampaign, error: updateError } = await supabaseClient
         .from('campaigns')
         .update({ status: status })
-        .eq('id', campaign_id)
+        .eq('id', cleanCampaignId)
         .select()
         .single();
 
@@ -383,7 +386,8 @@ Deno.serve(async (req) => {
     } else if (action === 'update_campaign_details') {
       const { campaign_id, name, selectedLists, messageContent, channel, scheduledDate, scheduleTime, mediaUrl, campaignType, templateName } = rest;
 
-      if (!campaign_id || !sanitizeUUID(campaign_id)) {
+      const cleanCampaignId = sanitizeUUID(campaign_id);
+      if (!cleanCampaignId) {
         return new Response(
           JSON.stringify({ success: false, error: 'Invalid or missing campaign ID' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 },
@@ -394,7 +398,7 @@ Deno.serve(async (req) => {
       const { data: campaign, error: campaignError } = await supabaseClient
         .from('campaigns')
         .select('business_id')
-        .eq('id', campaign_id)
+        .eq('id', cleanCampaignId)
         .single();
         
       if (campaignError) {
@@ -452,7 +456,7 @@ Deno.serve(async (req) => {
       const { data: updatedCampaign, error: updateError } = await supabaseClient
         .from('campaigns')
         .update(updateData)
-        .eq('id', campaign_id)
+        .eq('id', cleanCampaignId)
         .select()
         .single();
 
