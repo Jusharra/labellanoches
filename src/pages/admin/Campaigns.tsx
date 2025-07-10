@@ -59,19 +59,70 @@ const Campaigns = () => {
     campaignType: 'Regular Campaign'
   });
 
-  // Helper function to sanitize UUID arrays
-  const sanitizeUUIDArray = (input: any): string[] => {
-    if (!input || !Array.isArray(input)) return [];
+  // Helper function to sanitize and validate UUIDs
+  const sanitizeUUID = (input: string): string | null => {
+    if (typeof input !== 'string') return null;
+    const cleaned = input.replace(/['"]/g, '').trim();
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    return input
-      .map((id) => {
-        if (typeof id === 'string') {
-          const cleaned = id.replace(/['"]/g, '').trim();
-          return uuidRegex.test(cleaned) ? cleaned : null;
-        }
-        return null;
-      })
+    return uuidRegex.test(cleaned) ? cleaned : null;
+  };
+
+  // Helper function to convert target_contact_lists object to selectedLists array
+  const extractSelectedListsFromObject = (targetContactLists: any): string[] => {
+    if (!targetContactLists || typeof targetContactLists !== 'object') return [];
+    
+    // If it's still an array (legacy), convert to list of UUIDs
+    if (Array.isArray(targetContactLists)) {
+      return targetContactLists
+        .map(id => sanitizeUUID(id))
+        .filter(Boolean) as string[];
+    }
+    
+    // If it's an object, extract keys (UUIDs)
+    return Object.keys(targetContactLists)
+      .map(id => sanitizeUUID(id))
       .filter(Boolean) as string[];
+  };
+
+  // Helper function to get list names from target_contact_lists object
+  const extractListNamesFromObject = (targetContactLists: any, contactListMap: Map<string, string>): string => {
+    if (!targetContactLists || typeof targetContactLists !== 'object') return 'N/A';
+    
+    // If it's still an array (legacy), map to names using contactListMap
+    if (Array.isArray(targetContactLists)) {
+      const listIds = targetContactLists
+        .map(id => sanitizeUUID(id))
+        .filter(Boolean) as string[];
+      
+      const listNames = listIds
+        .map((listId: string) => contactListMap.get(listId))
+        .filter(Boolean);
+      
+      return listNames.length > 0 ? listNames.join(', ') : 'N/A';
+    }
+    
+    // If it's an object, extract values (list names)
+    const listNames = Object.values(targetContactLists)
+      .filter(name => typeof name === 'string' && name.trim().length > 0);
+    
+    return listNames.length > 0 ? listNames.join(', ') : 'N/A';
+  };
+
+  // Helper function to create target_contact_lists object from selectedLists array
+  const createTargetContactListsObject = (selectedListIds: string[], contactLists: any[]): object => {
+    const result: { [key: string]: string } = {};
+    
+    selectedListIds.forEach(listId => {
+      const cleanedId = sanitizeUUID(listId);
+      if (cleanedId) {
+        const list = contactLists.find(l => l.id === cleanedId);
+        if (list) {
+          result[cleanedId] = list.name;
+        }
+      }
+    });
+    
+    return result;
   };
 
   // Fetch campaigns from Supabase directly
@@ -135,17 +186,11 @@ const Campaigns = () => {
         // Ensure status is always a string, default to 'draft' if null/undefined
         const campaignStatus = campaign.status || 'draft';
         
-        // Clean and map target_contact_lists (array of UUIDs) to list names
-        let selectedListsNames = 'N/A';
-        if (campaign.target_contact_lists && Array.isArray(campaign.target_contact_lists)) {
-          const cleanedListIds = sanitizeUUIDArray(campaign.target_contact_lists);
-          
-          const listNames = cleanedListIds
-            .map((listId: string) => contactListMap.get(listId))
-            .filter(Boolean);
-          
-          selectedListsNames = listNames.length > 0 ? listNames.join(', ') : 'N/A';
-        }
+        // Extract list names from target_contact_lists (jsonb object or legacy array)
+        const selectedListsNames = extractListNamesFromObject(campaign.target_contact_lists, contactListMap);
+        
+        // Extract selected list IDs for editing
+        const selectedLists = extractSelectedListsFromObject(campaign.target_contact_lists);
 
         return {
           id: campaign.id,
@@ -159,7 +204,7 @@ const Campaigns = () => {
           createdDate: new Date(campaign.created_at).toLocaleDateString(),
           campaignType: campaign.campaign_type || 'Regular Campaign',
           business: 'La Bella Noches', // Placeholder, ideally fetched from user's business
-          selectedLists: sanitizeUUIDArray(campaign.target_contact_lists) || [],
+          selectedLists: selectedLists,
           templateId: 'N/A', // Not directly available from DB, can be derived if needed
           channel: campaign.channel || 'sms',
           scheduleTime: scheduleTime,
@@ -383,14 +428,14 @@ const Campaigns = () => {
         scheduled_time = new Date(`${formData.scheduledDate}T${formData.scheduleTime}`).toISOString();
       }
 
-      // Clean selectedLists array
-      const sanitizedLists = sanitizeUUIDArray(formData.selectedLists);
+      // Convert selectedLists array to target_contact_lists object
+      const targetContactListsObject = createTargetContactListsObject(formData.selectedLists, contactLists);
 
       const { data: newCampaign, error: insertError } = await supabase
         .from('campaigns')
         .insert({
           title: formData.name,
-          target_contact_lists: sanitizedLists,
+          target_contact_lists: targetContactListsObject,
           message: formData.messageContent,
           channel: formData.channel,
           scheduled_time: scheduled_time,
@@ -465,12 +510,12 @@ const Campaigns = () => {
         scheduled_time = new Date(`${formData.scheduledDate}T${formData.scheduleTime}`).toISOString();
       }
 
-      // Clean selectedLists array
-      const sanitizedLists = sanitizeUUIDArray(formData.selectedLists);
+      // Convert selectedLists array to target_contact_lists object
+      const targetContactListsObject = createTargetContactListsObject(formData.selectedLists, contactLists);
 
       const updateData: any = {
         title: formData.name,
-        target_contact_lists: sanitizedLists,
+        target_contact_lists: targetContactListsObject,
         message: formData.messageContent,
         channel: formData.channel,
         scheduled_time: scheduled_time,
