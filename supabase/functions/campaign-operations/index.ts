@@ -200,7 +200,7 @@ Deno.serve(async (req) => {
         .from('campaigns')
         .insert({
           title: name,
-          target_contact_lists: selectedLists || [],
+          target_contact_lists: sanitizedLists,
           message: messageContent,
           channel: channel,
           scheduled_time: scheduled_time,
