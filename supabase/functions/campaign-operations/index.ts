@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
   // Initialize Supabase client with the service role key to bypass RLS for administrative actions
   // In a production environment, ensure SUPABASE_SERVICE_ROLE_KEY is set as a secret for the Edge function.
   const supabaseClient = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('VITE_SUPABASE_URL') ?? '',
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', 
     {
       auth: {
