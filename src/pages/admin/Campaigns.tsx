@@ -411,11 +411,20 @@ const Campaigns = () => {
         scheduled_time = new Date(`${formData.scheduledDate}T${formData.scheduleTime}`).toISOString();
       }
 
+      // Transform selectedLists array into a JSON object
+      const targetContactListsObject: { [key: string]: string } = {};
+      for (const listId of formData.selectedLists) {
+        const list = contactLists.find(cl => cl.id === listId);
+        if (list) {
+          targetContactListsObject[listId] = list.name;
+        }
+      }
+      
       const { data: newCampaign, error: insertError } = await supabase
         .from('campaigns')
         .insert({
           title: formData.name,
-          target_contact_lists: formData.selectedLists,
+          target_contact_lists: targetContactListsObject, // Send as JSON object instead of array
           message: formData.messageContent,
           channel: formData.channel,
           scheduled_time: scheduled_time,
@@ -490,9 +499,18 @@ const Campaigns = () => {
         scheduled_time = new Date(`${formData.scheduledDate}T${formData.scheduleTime}`).toISOString();
       }
 
+      // Transform selectedLists array into a JSON object
+      const targetContactListsObject: { [key: string]: string } = {};
+      for (const listId of formData.selectedLists) {
+        const list = contactLists.find(cl => cl.id === listId);
+        if (list) {
+          targetContactListsObject[listId] = list.name;
+        }
+      }
+      
       const updateData: any = {
         title: formData.name,
-        target_contact_lists: formData.selectedLists,
+        target_contact_lists: targetContactListsObject, // Send as JSON object instead of array
         message: formData.messageContent,
         channel: formData.channel,
         scheduled_time: scheduled_time,
