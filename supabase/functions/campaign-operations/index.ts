@@ -103,7 +103,20 @@ Deno.serve(async (req) => {
       // Fetch campaigns
       const { data: campaigns, error: campaignsError } = await supabaseClient
         .from('campaigns')
-        .select('*');
+        .select(`
+          id,
+          title,
+          status,
+          target_contact_lists,
+          message_template,
+          scheduled_time,
+          created_at,
+          campaign_type,
+          channel,
+          media_url,
+          message,
+          webhook_url
+        `);
 
       if (campaignsError) {
         console.error('Error fetching campaigns:', campaignsError);
