@@ -202,6 +202,21 @@ Deno.serve(async (req) => {
         );
       }
 
+      // Fetch business settings to get webhook_url and from_number
+      const { data: business, error: businessError } = await supabaseClient
+        .from('businesses')
+        .select('webhook_url, twilio_number')
+        .eq('id', userProfile.business_id)
+        .single();
+        
+      if (businessError) {
+        console.error('Error fetching business settings:', businessError);
+        return new Response(
+          JSON.stringify({ success: false, error: `Failed to fetch business settings: ${businessError.message}` }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 },
+        );
+      }
+
       let scheduled_time = null;
       if (scheduledDate && scheduleTime) {
         scheduled_time = new Date(`${scheduledDate}T${scheduleTime}`).toISOString();
@@ -227,7 +242,9 @@ Deno.serve(async (req) => {
           message_template: templateName,
           status: scheduled_time ? 'scheduled' : 'draft', 
           business_id: userProfile.business_id, 
-          created_by: user_id
+          created_by: user_id,
+          webhook_url: business.webhook_url,
+          from_number: business.twilio_number
         })
         .select()
         .single();
@@ -296,6 +313,36 @@ Deno.serve(async (req) => {
         );
       }
 
+      // Get the campaign's business_id to fetch business settings
+      const { data: campaign, error: campaignError } = await supabaseClient
+        .from('campaigns')
+        .select('business_id')
+        .eq('id', campaign_id)
+        .single();
+        
+      if (campaignError) {
+        console.error('Error fetching campaign:', campaignError);
+        return new Response(
+          JSON.stringify({ success: false, error: `Failed to fetch campaign: ${campaignError.message}` }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 },
+        );
+      }
+      
+      // Fetch business settings to get webhook_url and from_number
+      const { data: business, error: businessError } = await supabaseClient
+        .from('businesses')
+        .select('webhook_url, twilio_number')
+        .eq('id', campaign.business_id)
+        .single();
+        
+      if (businessError) {
+        console.error('Error fetching business settings:', businessError);
+        return new Response(
+          JSON.stringify({ success: false, error: `Failed to fetch business settings: ${businessError.message}` }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 },
+        );
+      }
+
       let scheduled_time = null;
       if (scheduledDate && scheduleTime) {
         scheduled_time = new Date(`${scheduledDate}T${scheduleTime}`).toISOString();
@@ -317,6 +364,10 @@ Deno.serve(async (req) => {
       if (mediaUrl !== undefined) updateData.media_url = mediaUrl;
       if (campaignType !== undefined) updateData.campaign_type = campaignType;
       if (templateName !== undefined) updateData.message_template = templateName;
+      
+      // Always update business-related fields from current business settings
+      updateData.webhook_url = business.webhook_url;
+      updateData.from_number = business.twilio_number;
 
       // Update status based on scheduling
       if (scheduled_time) {
