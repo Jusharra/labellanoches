@@ -150,15 +150,6 @@ Deno.serve(async (req) => {
     } else if (action === 'create_campaign') {
       const { name, selectedLists, messageContent, channel, scheduledDate, scheduleTime, mediaUrl, campaignType, templateName } = rest;
 
-      // Clean selectedLists to remove any extra quotes from UUID strings
-      const cleanedSelectedLists = selectedLists ? selectedLists.map((listId: string) => {
-        if (typeof listId === 'string') {
-          // Remove all double quotes from the UUID string
-          return listId.replace(/"/g, '');
-        }
-        return listId;
-      }) : [];
-
       let scheduled_time = null;
       if (scheduledDate && scheduleTime) {
         scheduled_time = new Date(`${scheduledDate}T${scheduleTime}`).toISOString();
@@ -174,7 +165,7 @@ Deno.serve(async (req) => {
         .from('campaigns')
         .insert({
           title: name,
-          target_contact_lists: cleanedSelectedLists,
+          target_contact_lists: selectedLists || [],
           message: messageContent,
           channel: channel,
           scheduled_time: scheduled_time,
