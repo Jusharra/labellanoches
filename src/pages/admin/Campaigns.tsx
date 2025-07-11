@@ -123,7 +123,7 @@ const Campaigns = () => {
       // Fetch campaigns
       const { data: campaignsData, error: campaignsError } = await supabase
         .from('campaigns')
-        .select('*')
+        .select('*, total_recipients_count')
         .order('created_at', { ascending: false });
 
       if (campaignsError) {
@@ -183,7 +183,7 @@ const Campaigns = () => {
           listName: selectedListsNames, 
           templateName: campaign.message_template || 'Custom Message', 
           scheduledDate: scheduledDate,
-          sentCount: sentCounts.get(campaign.id) || 0, 
+          sentCount: campaign.total_recipients_count || sentCounts.get(campaign.id) || 0, 
           openRate: 'N/A', // Placeholder, as 'opened' status is not in schema
           createdDate: new Date(campaign.created_at).toLocaleDateString(),
           campaignType: campaign.campaign_type || 'Regular Campaign',

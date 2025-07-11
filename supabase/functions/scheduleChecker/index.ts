@@ -169,6 +169,20 @@ Deno.serve(async (req) => {
 
       console.log(`👥 Found ${contacts.length} contacts for campaign ${campaign.id}`);
 
+      // Update the original campaign with the total recipients count
+      const { error: updateRecipientsCountError } = await supabaseClient
+        .from('campaigns')
+        .update({ total_recipients_count: contacts.length })
+        .eq('id', campaign.id);
+        
+      if (updateRecipientsCountError) {
+        console.error(`❌ scheduleChecker: Error updating campaign recipients count for ${campaign.id}:`, updateRecipientsCountError);
+        // Log error but continue with the campaign processing
+        console.warn('Campaign will continue processing despite recipients count update error');
+      } else {
+        console.log(`✅ scheduleChecker: Updated campaign ${campaign.id} with ${contacts.length} recipients`);
+      }
+
       const recordsToInsert = [];
       for (const contact of contacts) {
         recordsToInsert.push({

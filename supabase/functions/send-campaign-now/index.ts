@@ -245,6 +245,20 @@ Deno.serve(async (req) => {
     }
 
     console.log(`👥 send-campaign-now: Found ${contacts.length} contacts for campaign ${cleanCampaignId}`);
+    
+    // Update the original campaign with the total recipients count
+    const { error: updateRecipientsCountError } = await supabaseClient
+      .from('campaigns')
+      .update({ total_recipients_count: contacts.length })
+      .eq('id', cleanCampaignId);
+      
+    if (updateRecipientsCountError) {
+      console.error(`❌ send-campaign-now: Error updating campaign recipients count for ${cleanCampaignId}:`, updateRecipientsCountError);
+      // Log error but continue with the campaign send process
+      console.warn('Campaign will continue processing despite recipients count update error');
+    } else {
+      console.log(`✅ send-campaign-now: Updated campaign ${cleanCampaignId} with ${contacts.length} recipients`);
+    }
 
     // Create individual campaign records for each contact
     const recordsToInsert = [];
