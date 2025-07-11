@@ -83,15 +83,20 @@ const ContactLists = () => {
       const contactCounts = new Map<string, number>();
       if (contactListMembersData) {
         contactListMembersData.forEach(member => {
-          contactCounts.set(member.contact_list_id, (contactCounts.get(member.contact_list_id) || 0) + 1);
+          // Sanitize the contact_list_id to ensure consistent format
+          const cleanListId = sanitizeUUID(member.contact_list_id);
+          if (cleanListId) {
+            contactCounts.set(cleanListId, (contactCounts.get(cleanListId) || 0) + 1);
+          }
         });
       }
 
       const formattedContactLists = contactListsData.map((list: any) => ({
         id: list.id,
         name: list.list_name,
-        description: list.description || '',
-        contactCount: contactCounts.get(list.id) || 0,
+        description: list.description || '', 
+        // Sanitize list.id to ensure consistent format when looking up the count
+        contactCount: contactCounts.get(sanitizeUUID(list.id) || '') || 0,
         createdDate: new Date(list.created_at).toLocaleDateString(),
       }));
       
