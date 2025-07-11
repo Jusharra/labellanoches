@@ -202,7 +202,7 @@ const Contacts: React.FC = () => {
         console.log('🔄 Attempting direct Supabase query for contact lists...');
         const { data: contactListsData, error: contactListsError } = await supabase
           .from('contact_lists')
-          .select('id, list_name:name')
+          .select('id, list_name')
           .eq('business_id', businessId)
           .order('created_at', { ascending: false });
 
@@ -211,7 +211,12 @@ const Contacts: React.FC = () => {
           throw contactListsError;
         }
 
-        setAvailableContactLists(contactListsData || []);
+        // Map list_name to name for component compatibility
+        const mappedContactLists = (contactListsData || []).map(list => ({
+          id: list.id,
+          name: list.list_name
+        }));
+        setAvailableContactLists(mappedContactLists);
         console.log('✅ Successfully loaded contact lists via direct query:', contactListsData?.length || 0);
         return;
       } catch (directQueryError) {
