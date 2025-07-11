@@ -83,14 +83,14 @@ const SMSOptInForm = () => {
 
       // Find business ID for La Bella Noches
       if (supabase) {
-        const { data: business, error: businessError } = await supabase
+        const { data: businesses, error: businessError } = await supabase
           .from('businesses')
           .select('id')
           .eq('name', 'La Bella Noches')
-          .single();
+          .limit(1);
           
-        if (!businessError && business) {
-          payload.businessId = business.id;
+        if (!businessError && businesses && businesses.length > 0) {
+          payload.businessId = businesses[0].id;
         }
       }
 
