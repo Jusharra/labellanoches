@@ -24,7 +24,7 @@ const Dashboard = () => {
         // Fetch campaigns directly from the table
         const { data: campaignsData, error: campaignsError } = await supabase
           .from('campaigns')
-          .select('*')
+          .select('*, total_recipients_count')
           .order('created_at', { ascending: false });
         
         if (campaignsError) {
@@ -56,7 +56,7 @@ const Dashboard = () => {
           id: campaign.id,
           name: campaign.title || 'Untitled Campaign',
           status: campaign.status || 'draft',
-          sentCount: sentCounts.get(campaign.id) || 0,
+          sentCount: campaign.total_recipients_count || sentCounts.get(campaign.id) || 0,
           scheduledDate: campaign.scheduled_time ? new Date(campaign.scheduled_time).toLocaleDateString() : '',
           createdDate: campaign.created_at ? new Date(campaign.created_at).toLocaleDateString() : ''
         }));
@@ -98,7 +98,7 @@ const Dashboard = () => {
     },
     {
       name: 'Messages Sent',
-      value: campaigns.reduce((total, campaign) => total + campaign.sentCount, 0).toLocaleString(),
+      value: campaigns.reduce((total, campaign) => total + (campaign.sentCount || 0), 0).toLocaleString(),
       change: '+8%',
       changeType: 'increase',
       icon: MessageSquare,
