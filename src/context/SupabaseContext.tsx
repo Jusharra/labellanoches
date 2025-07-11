@@ -40,6 +40,12 @@ export const SupabaseProvider: React.FC<SupabaseProviderProps> = ({ children }) 
     setIsLoadingRole(true);
     try {
       console.log('🔍 Fetching user role for:', userId);
+      
+      // Test Supabase connectivity before making the request
+      if (!supabase) {
+        throw new Error('Supabase client not initialized');
+      }
+      
       const { data, error } = await supabase
         .from('user_profiles')
         .select('role, business_id')
@@ -52,7 +58,14 @@ export const SupabaseProvider: React.FC<SupabaseProviderProps> = ({ children }) 
           setUserRole(null);
           setBusinessId(null);
         } else {
-          console.error('❌ Error fetching user role:', error);
+          console.error('❌ Error fetching user role:', error.message, error);
+          // Check if it's a network error
+          if (error.message.includes('Failed to fetch') || error.message.includes('fetch')) {
+            console.error('🌐 Network connectivity issue detected. Please check:');
+            console.error('- Internet connection');
+            console.error('- Supabase project status');
+            console.error('- Environment variables');
+          }
           setUserRole(null);
           setBusinessId(null);
         }
@@ -63,6 +76,14 @@ export const SupabaseProvider: React.FC<SupabaseProviderProps> = ({ children }) 
       }
     } catch (error) {
       console.error('❌ Unexpected error fetching user role:', error);
+      // Check if it's a network error
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        console.error('🌐 Network connectivity issue detected. This usually means:');
+        console.error('1. Supabase URL is incorrect in .env file');
+        console.error('2. Network connectivity problems');
+        console.error('3. Supabase project is not accessible');
+        console.error('Current Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
+      }
       setUserRole(null);
       setBusinessId(null);
     } finally {
