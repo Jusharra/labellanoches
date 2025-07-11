@@ -632,6 +632,8 @@ const Campaigns = () => {
         return 'bg-yellow-100 text-yellow-800';
       case 'draft':
         return 'bg-gray-100 text-gray-800';
+      case 'message content ready':
+        return 'bg-purple-100 text-purple-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -833,7 +835,7 @@ const Campaigns = () => {
                         >
                           <Eye className="h-4 w-4" />
                         </button>
-                        {(campaign.status === 'draft' || campaign.status === 'scheduled') && (
+                        {(campaign.status === 'draft' || campaign.status === 'scheduled' || campaign.status === 'Message Content Ready') && (
                           <button
                             onClick={() => handleEditCampaign(campaign)}
                             className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
@@ -842,7 +844,7 @@ const Campaigns = () => {
                             <Edit className="h-4 w-4" />
                           </button>
                         )}
-                        {(campaign.status === 'draft' || campaign.status === 'scheduled') && (
+                        {(campaign.status === 'draft' || campaign.status === 'scheduled' || campaign.status === 'Message Content Ready') && (
                           <button
                             onClick={() => handleSendCampaign(campaign.id)}
                             className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 transition-colors"
