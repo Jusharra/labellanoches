@@ -155,13 +155,13 @@ Deno.serve(async (req) => {
             .from('businesses')
             .select('id')
             .eq('name', 'La Bella Noches')
-            .single();
+            .limit(1);
             
           if (businessError) {
             console.error("Error finding default business:", businessError);
-          } else if (defaultBusiness) {
-            console.log("Found default business:", defaultBusiness.id);
-            finalBusinessId = defaultBusiness.id;
+          } else if (defaultBusiness && defaultBusiness.length > 0) {
+            console.log("Found default business:", defaultBusiness[0].id);
+            finalBusinessId = defaultBusiness[0].id;
           }
           
           // If still no business_id, try to find any business
@@ -169,14 +169,13 @@ Deno.serve(async (req) => {
             const { data: anyBusiness, error: anyBusinessError } = await supabaseClient
               .from('businesses')
               .select('id')
-              .limit(1)
-              .single();
+              .limit(1);
               
             if (anyBusinessError) {
               console.error("Error finding any business:", anyBusinessError);
-            } else if (anyBusiness) {
-              console.log("Using first available business:", anyBusiness.id);
-              finalBusinessId = anyBusiness.id;
+            } else if (anyBusiness && anyBusiness.length > 0) {
+              console.log("Using first available business:", anyBusiness[0].id);
+              finalBusinessId = anyBusiness[0].id;
             }
           }
         }
