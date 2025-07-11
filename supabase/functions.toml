@@ -14,5 +14,8 @@ schedule = "*/30 * * * *"
 # Run every minute to check for campaigns that are due to be sent
 schedule = "*/1 * * * *"
 
+[send-campaign-now]
+# Function to immediately process and send campaigns
+
 [contacts-operations]
 # Handles CRUD operations for contacts and contact lists

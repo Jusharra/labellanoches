@@ -65,7 +65,8 @@ Deno.serve(async (req) => {
       .select('*')
       .eq('status', 'scheduled')
       .lte('scheduled_time', now)
-      .is('original_campaign_id', null); // Only process original campaign definitions
+      .is('original_campaign_id', null) // Only process original campaign definitions
+      .not('scheduled_time', 'is', null); // Ensure scheduled_time is not null
 
     if (fetchError) {
       console.error('❌ scheduleChecker: Error fetching scheduled campaigns:', fetchError);

@@ -580,7 +580,7 @@ const Campaigns = () => {
 
   // Handle campaign sending
   const handleSendCampaign = async (campaignId: string) => {
-    if (!supabase || !isAuthenticated) {
+    if (!supabase || !isAuthenticated || !user) {
       toast.error('Authentication required to send campaigns');
       return;
     }
@@ -593,25 +593,49 @@ const Campaigns = () => {
     }
 
     console.log('⏳ Sending campaign:', campaignId);
+    
+    // Update the local state immediately to provide user feedback
+    setCampaigns(prevCampaigns => 
+      prevCampaigns.map(c => 
+        c.id === campaignId 
+          ? { ...c, status: 'sending' }
+          : c
+      )
+    );
+    
     try {
-      const { data: updatedCampaign, error: updateError } = await supabase
-        .from('campaigns')
-        .update({ status: 'sending' })
-        .eq('id', campaignId)
-        .select()
-        .single();
+      // Call the send-campaign-now Edge Function for immediate processing
+      const { data, error } = await supabase.functions.invoke('send-campaign-now', {
+        body: { campaign_id: campaignId }
+      });
 
-      if (updateError) {
-        console.error('❌ Error sending campaign:', updateError);
-        throw new Error(`Failed to send campaign: ${updateError.message}`);
+      if (error) {
+        console.error('❌ Error invoking send-campaign-now:', error);
+        throw new Error(`Failed to send campaign: ${error.message}`);
       }
 
-      console.log('✅ Campaign sent successfully');
-      toast.success('Campaign is being sent!');
+      if (data?.success) {
+        console.log('✅ Campaign sent successfully:', data);
+        toast.success(`Campaign sent successfully to ${data.recipients_count || 0} contacts!`);
+      } else {
+        console.error('❌ Send campaign API error:', data?.error);
+        throw new Error(data?.error || 'Failed to send campaign');
+      }
+      
+      // Refresh campaigns to get the updated status
       fetchCampaigns(); // Refresh campaigns
     } catch (error) {
       console.error('❌ Error sending campaign:', error);
       toast.error(`Failed to send campaign: ${error.message}`);
+      
+      // Revert the local state change on error
+      setCampaigns(prevCampaigns => 
+        prevCampaigns.map(c => 
+          c.id === campaignId 
+            ? { ...c, status: campaign?.status || 'draft' } // Revert to original status
+            : c
+        )
+      );
     }
   };
 
