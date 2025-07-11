@@ -73,7 +73,7 @@ const Contacts: React.FC = () => {
       fetchContacts();
       fetchContactLists();
     }
-  }, [supabase, isAuthenticated, supabaseLoading]);
+  }, [supabase, isAuthenticated, supabaseLoading, currentManagedListName]);
 
   const fetchContacts = async () => {
     if (!supabase || !isAuthenticated) {
@@ -83,7 +83,13 @@ const Contacts: React.FC = () => {
 
     try {
       setLoading(true);
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/contacts-operations/contacts`, {
+      // Build the URL with query parameters if a list is selected
+      let url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/contacts-operations/contacts`;
+      if (currentManagedListName) {
+        url += `?listName=${encodeURIComponent(currentManagedListName)}`;
+      }
+      
+      const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json'
