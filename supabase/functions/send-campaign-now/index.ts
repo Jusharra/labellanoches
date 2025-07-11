@@ -13,19 +13,34 @@ function stripQuotes(str: string): string {
 
 // Utility function to sanitize UUID arrays by removing invalid or badly formatted UUIDs
 function sanitizeUUIDArray(input: any): string[] {
-  if (!input || !Array.isArray(input)) return [];
-
+  if (!input) return [];
+  
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   
-  return input
-    .map((id) => {
-      if (typeof id === 'string') {
+  // Handle array input
+  if (Array.isArray(input)) {
+    return input
+      .map((id) => {
+        if (typeof id === 'string') {
+          const cleaned = stripQuotes(id.trim());
+          return uuidRegex.test(cleaned) ? cleaned : null;
+        }
+        return null;
+      })
+      .filter(Boolean) as string[];
+  }
+  
+  // Handle object input (where keys are UUIDs)
+  if (typeof input === 'object' && input !== null) {
+    return Object.keys(input)
+      .map((id) => {
         const cleaned = stripQuotes(id.trim());
         return uuidRegex.test(cleaned) ? cleaned : null;
-      }
-      return null;
-    })
-    .filter(Boolean) as string[];
+      })
+      .filter(Boolean) as string[];
+  }
+  
+  return [];
 }
 
 // Helper function to sanitize a single UUID string
@@ -155,6 +170,8 @@ Deno.serve(async (req) => {
     }
 
     const targetListIds = sanitizeUUIDArray(campaign.target_contact_lists);
+    console.log(`🔢 Extracted ${targetListIds.length} valid list IDs: ${JSON.stringify(targetListIds)}`);
+    
     if (targetListIds.length === 0) {
       console.warn(`⚠️ send-campaign-now: Campaign ${cleanCampaignId} has no target contact lists.`);
       // Update campaign status to 'completed_no_recipients'

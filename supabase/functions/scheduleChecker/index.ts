@@ -13,19 +13,34 @@ function stripQuotes(str: string): string {
 
 // Utility function to sanitize UUID arrays by removing invalid or badly formatted UUIDs
 function sanitizeUUIDArray(input: any): string[] {
-  if (!input || !Array.isArray(input)) return [];
-
+  if (!input) return [];
+  
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   
-  return input
-    .map((id) => {
-      if (typeof id === 'string') {
+  // Handle array input
+  if (Array.isArray(input)) {
+    return input
+      .map((id) => {
+        if (typeof id === 'string') {
+          const cleaned = stripQuotes(id.trim());
+          return uuidRegex.test(cleaned) ? cleaned : null;
+        }
+        return null;
+      })
+      .filter(Boolean) as string[];
+  }
+  
+  // Handle object input (where keys are UUIDs)
+  if (typeof input === 'object' && input !== null) {
+    return Object.keys(input)
+      .map((id) => {
         const cleaned = stripQuotes(id.trim());
         return uuidRegex.test(cleaned) ? cleaned : null;
-      }
-      return null;
-    })
-    .filter(Boolean) as string[];
+      })
+      .filter(Boolean) as string[];
+  }
+  
+  return [];
 }
 
 // Helper function to sanitize a single UUID string
@@ -60,6 +75,7 @@ Deno.serve(async (req) => {
     const now = new Date().toISOString();
 
     // Fetch campaigns that are scheduled and due, and are original campaign definitions
+    console.log(`🔍 Searching for scheduled campaigns due by ${now}...`);
     const { data: scheduledCampaigns, error: fetchError } = await supabaseClient
       .from('campaigns')
       .select('*')
@@ -89,6 +105,9 @@ Deno.serve(async (req) => {
     for (const campaign of scheduledCampaigns) {
       console.log(`🔄 Processing campaign: ${campaign.title} (ID: ${campaign.id})`);
 
+      // Log the target_contact_lists to debug
+      console.log(`📋 Target contact lists: ${JSON.stringify(campaign.target_contact_lists)}`);
+
       // Update original campaign status to 'processing' to avoid re-processing
       await supabaseClient
         .from('campaigns')
@@ -96,6 +115,8 @@ Deno.serve(async (req) => {
         .eq('id', campaign.id);
 
       const targetListIds = sanitizeUUIDArray(campaign.target_contact_lists);
+      console.log(`🔢 Extracted ${targetListIds.length} valid list IDs: ${JSON.stringify(targetListIds)}`);
+      
       if (targetListIds.length === 0) {
         console.warn(`⚠️ Campaign ${campaign.id} has no target contact lists. Skipping.`);
         // Update original campaign status to 'completed_no_recipients'
