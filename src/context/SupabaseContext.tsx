@@ -105,6 +105,9 @@ export const SupabaseProvider: React.FC<SupabaseProviderProps> = ({ children }) 
           // Handle invalid refresh token by signing out
           if (error.message && error.message.includes('Invalid Refresh Token')) {
             console.log('🔄 Invalid refresh token detected, signing out...');
+            // Explicitly clear stale session data from localStorage
+            localStorage.removeItem('sb-ctejfdrodnkqajijkkkq-auth-token');
+            localStorage.removeItem('supabase.auth.token');
             await supabase.auth.signOut();
             setSession(null);
             setUser(null);
@@ -131,6 +134,9 @@ export const SupabaseProvider: React.FC<SupabaseProviderProps> = ({ children }) 
         // Handle invalid refresh token in catch block as well
         if (error instanceof Error && error.message && error.message.includes('Invalid Refresh Token')) {
           console.log('🔄 Invalid refresh token detected in catch, signing out...');
+          // Explicitly clear stale session data from localStorage
+          localStorage.removeItem('sb-ctejfdrodnkqajijkkkq-auth-token');
+          localStorage.removeItem('supabase.auth.token');
           await supabase.auth.signOut();
           setSession(null);
           setUser(null);
