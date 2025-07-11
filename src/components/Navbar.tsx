@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ChefHat, Menu, X, Moon, Sun, User, LogOut } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { ChefHat, Menu, X, Moon, Sun } from 'lucide-react';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
@@ -12,7 +11,6 @@ const Navbar = () => {
     return false;
   });
   const location = useLocation();
-  const { user, userRole, isAuthenticated, signOut } = useAuth();
 
   const toggleDarkMode = () => {
     const newDarkMode = !isDark;
@@ -34,27 +32,14 @@ const Navbar = () => {
     }
   }, []);
 
-  // Base navigation items
-  const baseNavigation = [
+  const navigation = [
     { name: 'Home', href: '/' },
     { name: 'Menu', href: '/menu' },
     { name: 'About', href: '/about' },
     { name: 'Contact', href: '/contact' },
   ];
 
-  // Add Dashboard for admin users
-  const navigation = userRole === 'admin' 
-    ? [
-        ...baseNavigation,
-        { name: 'Dashboard', href: '/admin' },
-      ]
-    : baseNavigation;
-
   const isActive = (path: string) => location.pathname === path;
-
-  const handleSignOut = async () => {
-    await signOut();
-  };
 
   return (
     <nav className="bg-white dark:bg-gray-800 shadow-lg sticky top-0 z-50 transition-colors">
@@ -94,32 +79,6 @@ const Navbar = () => {
               >
                 {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
               </button>
-              
-              {/* Auth Buttons */}
-              {isAuthenticated ? (
-                <div className="flex items-center space-x-2 xl:space-x-4">
-                  <div className="hidden xl:flex items-center space-x-2">
-                    <User className="h-4 w-4 text-gray-600 dark:text-gray-300" />
-                    <span className="text-sm text-gray-600 dark:text-gray-300">
-                      {user?.email}
-                    </span>
-                  </div>
-                  <button
-                    onClick={handleSignOut}
-                    className="flex items-center space-x-1 px-2 xl:px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-red-600 transition-colors"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    <span className="hidden xl:inline">Sign Out</span>
-                  </button>
-                </div>
-              ) : (
-                <Link
-                  to="/sign-in"
-                  className="bg-primary text-white px-4 py-2 rounded-lg font-semibold hover:bg-primary/90 transition-colors"
-                >
-                  Sign In
-                </Link>
-              )}
             </div>
           </div>
 
@@ -162,33 +121,6 @@ const Navbar = () => {
               {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
               <span>{isDark ? 'Light Mode' : 'Dark Mode'}</span>
             </button>
-            
-            {/* Mobile Auth */}
-            <div className="px-3 py-2 border-t border-gray-200 dark:border-gray-700">
-              {isAuthenticated ? (
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2 text-gray-600 dark:text-gray-300">
-                    <User className="h-4 w-4" />
-                    <span className="text-sm">{user?.email}</span>
-                  </div>
-                  <button
-                    onClick={handleSignOut}
-                    className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    <span>Sign Out</span>
-                  </button>
-                </div>
-              ) : (
-                <Link
-                  to="/sign-in"
-                  className="block w-full bg-primary text-white px-4 py-2 rounded-lg font-semibold hover:bg-primary/90 transition-colors text-center"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Sign In
-                </Link>
-              )}
-            </div>
           </div>
         </div>
       )}

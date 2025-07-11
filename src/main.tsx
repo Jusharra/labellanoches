@@ -2,16 +2,13 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Toaster } from 'react-hot-toast';
 import { SupabaseProvider } from './context/SupabaseContext';
-import { AuthProvider } from './context/AuthContext';
 import App from './App.tsx';
 import './index.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <SupabaseProvider>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
+      <App />
     </SupabaseProvider>
     <Toaster
       position="top-right"
