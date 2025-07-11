@@ -398,7 +398,7 @@ const Contacts: React.FC = () => {
           `"${contact.phone}"`,
           `"${contact.email}"`,
           `"${contact.source}"`,
-          `"${contact.lists.join('; ')}"`,
+          `"${(contact.lists || []).join('; ')}"`,
           `"${contact.date}"`
         ].join(','))
       ].join('\n');
@@ -692,7 +692,7 @@ const Contacts: React.FC = () => {
           `"${contact.phone}"`,
           `"${contact.email}"`,
           `"${contact.source}"`,
-          `"${contact.lists.join('; ')}"`,
+          `"${(contact.lists || []).join('; ')}"`,
           `"${contact.date}"`
         ].join(','))
       ].join('\n');
@@ -746,7 +746,7 @@ const Contacts: React.FC = () => {
         if (selectedContacts.includes(contact.id)) {
           return {
             ...contact,
-            lists: contact.lists.filter(list => list !== currentManagedListName)
+            lists: (contact.lists || []).filter(list => list !== currentManagedListName)
           };
         }
         return contact;
@@ -996,7 +996,7 @@ const Contacts: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                     <div className="flex flex-wrap gap-1">
-                      {contact.lists.map((list, index) => (
+                      {(contact.lists || []).map((list, index) => (
                         <span key={index} className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
                           {list}
                         </span>
