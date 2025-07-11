@@ -19,7 +19,7 @@ interface Contact {
 }
 
 const Contacts: React.FC = () => {
-  const { supabase, isLoading: supabaseLoading, isAuthenticated } = useSupabase();
+  const { supabase, isLoading: supabaseLoading, isAuthenticated, businessId } = useSupabase();
   const location = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
@@ -69,11 +69,11 @@ const Contacts: React.FC = () => {
 
   // Fetch contacts and contact lists on component mount
   useEffect(() => {
-    if (supabase && isAuthenticated && !supabaseLoading) {
+    if (supabase && isAuthenticated && !supabaseLoading && businessId) {
       fetchContacts();
       fetchContactLists();
     }
-  }, [supabase, isAuthenticated, supabaseLoading, currentManagedListName]);
+  }, [supabase, isAuthenticated, supabaseLoading, businessId, currentManagedListName]);
 
   const fetchContacts = async () => {
     if (!supabase || !isAuthenticated) {
@@ -121,8 +121,12 @@ const Contacts: React.FC = () => {
       return;
     }
 
+    if (!businessId) {
+      console.warn('⚠️ Business ID not available');
+      return;
+    }
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/contacts-operations/lists`, {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/contacts-operations/lists?businessId=${businessId}`, {
         headers: {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json'

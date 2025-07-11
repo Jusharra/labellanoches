@@ -7,6 +7,7 @@ interface SupabaseContextType {
   user: User | null;
   session: Session | null;
   userRole: string | null;
+  businessId: string | null;
   isLoading: boolean;
   isLoadingRole: boolean;
   isAuthenticated: boolean;
@@ -30,6 +31,7 @@ export const SupabaseProvider: React.FC<SupabaseProviderProps> = ({ children }) 
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [businessId, setBusinessId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingRole, setIsLoadingRole] = useState(false);
 
@@ -40,7 +42,7 @@ export const SupabaseProvider: React.FC<SupabaseProviderProps> = ({ children }) 
       console.log('🔍 Fetching user role for:', userId);
       const { data, error } = await supabase
         .from('user_profiles')
-        .select('role')
+        .select('role, business_id')
         .eq('id', userId)
         .single();
 
@@ -48,17 +50,21 @@ export const SupabaseProvider: React.FC<SupabaseProviderProps> = ({ children }) 
         if (error.code === 'PGRST116') {
           console.log('👤 User profile not found, user may not have a role assigned');
           setUserRole(null);
+          setBusinessId(null);
         } else {
           console.error('❌ Error fetching user role:', error);
           setUserRole(null);
+          setBusinessId(null);
         }
       } else {
         console.log('✅ User role fetched:', data.role);
         setUserRole(data.role);
+        setBusinessId(data.business_id);
       }
     } catch (error) {
       console.error('❌ Unexpected error fetching user role:', error);
       setUserRole(null);
+      setBusinessId(null);
     } finally {
       setIsLoadingRole(false);
     }
@@ -95,6 +101,7 @@ export const SupabaseProvider: React.FC<SupabaseProviderProps> = ({ children }) 
             fetchUserRole(session.user.id);
           } else {
             setUserRole(null);
+            setBusinessId(null);
           }
         }
       } catch (error) {
@@ -125,6 +132,7 @@ export const SupabaseProvider: React.FC<SupabaseProviderProps> = ({ children }) 
           setSession(null);
           setUser(null);
           setUserRole(null);
+          setBusinessId(null);
           setIsLoading(false);
           return;
         }
@@ -137,6 +145,7 @@ export const SupabaseProvider: React.FC<SupabaseProviderProps> = ({ children }) 
           fetchUserRole(session.user.id);
         } else {
           setUserRole(null);
+          setBusinessId(null);
         }
         
         setIsLoading(false);
@@ -173,6 +182,7 @@ export const SupabaseProvider: React.FC<SupabaseProviderProps> = ({ children }) 
     user,
     session,
     userRole,
+    businessId,
     isLoading,
     isLoadingRole,
     isAuthenticated: !!user && !!session
