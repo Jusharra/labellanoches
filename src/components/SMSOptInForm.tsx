@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Phone, Mail, Building2, MessageSquare, Check } from 'lucide-react';
+import { useSupabase } from '../context/SupabaseContext';
 import toast from 'react-hot-toast';
 
 const SMSOptInForm = () => {
+  const { supabase } = useSupabase();
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [vipListId, setVipListId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -12,6 +16,39 @@ const SMSOptInForm = () => {
     email: '',
     permission: false,
   });
+
+  // Fetch the VIP Club contact list ID when component mounts
+  useEffect(() => {
+    const fetchVipListId = async () => {
+      if (!supabase) return;
+      
+      try {
+        // Look for a contact list with "VIP" or "Club" in the name
+        const { data, error } = await supabase
+          .from('contact_lists')
+          .select('id, list_name')
+          .or('list_name.ilike.%VIP%,list_name.ilike.%Club%')
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (error) {
+          console.error('Error fetching VIP contact list:', error);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          console.log('Found VIP list:', data[0]);
+          setVipListId(data[0].id);
+        } else {
+          console.log('No VIP list found');
+        }
+      } catch (error) {
+        console.error('Error in fetchVipListId:', error);
+      }
+    };
+
+    fetchVipListId();
+  }, [supabase]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,21 +61,47 @@ const SMSOptInForm = () => {
     setLoading(true);
     
     try {
-      // Call the Supabase Edge Function to create a new contact
+      // Prepare payload for contact creation
+      const payload: any = {
+        name: formData.name,
+        phoneNumber: formData.phone,
+        email: formData.email || null,
+        smsOptIn: formData.permission,
+        preferredLanguage: 'English',
+        tags: ['VIP Club', 'SMS Opt-in']
+      };
+      
+      // If we found a VIP list ID, include it in the payload
+      if (vipListId) {
+        console.log('Adding contact to VIP list:', vipListId);
+        payload.contactListIds = [vipListId];
+      }
+      
+      // If WhatsApp number was provided, add it to payload
+      if (formData.whatsapp) {
+        payload.whatsappNumber = formData.whatsapp;
+      }
+
+      // Find business ID for La Bella Noches
+      if (supabase) {
+        const { data: business, error: businessError } = await supabase
+          .from('businesses')
+          .select('id')
+          .eq('name', 'La Bella Noches')
+          .single();
+          
+        if (!businessError && business) {
+          payload.businessId = business.id;
+        }
+      }
+
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/contacts-operations/contacts`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          name: formData.name,
-          phoneNumber: formData.phone,
-          email: formData.email || null,
-          smsOptIn: formData.permission,
-          preferredLanguage: 'English',
-          tags: ['VIP Club', 'SMS Opt-in']
-        })
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
