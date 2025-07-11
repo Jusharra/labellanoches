@@ -82,11 +82,63 @@ const Contacts: React.FC = () => {
     }
 
     try {
+      console.log('🔍 Fetching contacts...');
+      console.log('Environment variables check:');
+      console.log('- VITE_SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL ? 'Present' : 'Missing');
+      console.log('- VITE_SUPABASE_ANON_KEY:', import.meta.env.VITE_SUPABASE_ANON_KEY ? 'Present' : 'Missing');
+      
       setLoading(true);
       // Build the URL with query parameters if a list is selected
       let url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/contacts-operations/contacts`;
       if (currentManagedListName) {
         url += `?listName=${encodeURIComponent(currentManagedListName)}`;
+      }
+      
+      console.log('📡 Fetching from URL:', url);
+      
+      // First, try to use direct Supabase queries instead of Edge Functions
+      try {
+        console.log('🔄 Attempting direct Supabase query as fallback...');
+        const { data: contactsData, error: contactsError } = await supabase
+          .from('contacts')
+          .select(`
+            id,
+            name,
+            phone_number,
+            email,
+            created_at,
+            opted_in,
+            tags,
+            language,
+            last_contact
+          `)
+          .order('created_at', { ascending: false });
+
+        if (contactsError) {
+          console.error('❌ Direct Supabase query failed:', contactsError);
+          throw contactsError;
+        }
+
+        // Transform the data to match expected format
+        const transformedContacts = contactsData.map((contact: any) => ({
+          id: contact.id,
+          name: contact.name || 'Unknown',
+          phone: contact.phone_number || '',
+          email: contact.email || '',
+          source: 'Direct', // Default source since we don't have this field
+          date: contact.created_at ? new Date(contact.created_at).toLocaleDateString() : '',
+          lists: [], // Would need to join with contact_list_members table
+          opted_in: contact.opted_in || false,
+          tags: contact.tags || [],
+          language: contact.language || 'English',
+          last_contact: contact.last_contact
+        }));
+
+        setContacts(transformedContacts);
+        console.log('✅ Successfully loaded contacts via direct query:', transformedContacts.length);
+        return;
+      } catch (directQueryError) {
+        console.error('❌ Direct Supabase query failed, trying Edge Function:', directQueryError);
       }
       
       const response = await fetch(url, {
@@ -97,6 +149,8 @@ const Contacts: React.FC = () => {
       });
       
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Edge Function response error:', response.status, response.statusText, errorText);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
@@ -104,12 +158,27 @@ const Contacts: React.FC = () => {
       
       if (data?.success) {
         setContacts(data.data);
+        console.log('✅ Successfully loaded contacts via Edge Function:', data.data.length);
       } else {
         throw new Error(data?.error || 'Failed to fetch contacts');
       }
     } catch (error) {
       console.error('Error fetching contacts:', error);
-      alert('Failed to load contacts. Please try again.');
+      
+      // Provide specific error messages based on error type
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        console.error('🌐 Network connectivity issue detected when fetching contacts');
+        console.error('Please check:');
+        console.error('1. Internet connection');
+        console.error('2. Supabase URL in .env file:', import.meta.env.VITE_SUPABASE_URL);
+        console.error('3. Supabase project accessibility');
+        alert('Network error: Unable to connect to the database. Please check your internet connection and try again.');
+      } else {
+        alert('Failed to load contacts. Please try again.');
+      }
+      
+      // Set empty array as fallback
+      setContacts([]);
     } finally {
       setLoading(false);
     }
@@ -126,6 +195,29 @@ const Contacts: React.FC = () => {
       return;
     }
     try {
+      console.log('🔍 Fetching contact lists for business:', businessId);
+      
+      // Try direct Supabase query first
+      try {
+        console.log('🔄 Attempting direct Supabase query for contact lists...');
+        const { data: contactListsData, error: contactListsError } = await supabase
+          .from('contact_lists')
+          .select('id, list_name as name')
+          .eq('business_id', businessId)
+          .order('created_at', { ascending: false });
+
+        if (contactListsError) {
+          console.error('❌ Direct contact lists query failed:', contactListsError);
+          throw contactListsError;
+        }
+
+        setAvailableContactLists(contactListsData || []);
+        console.log('✅ Successfully loaded contact lists via direct query:', contactListsData?.length || 0);
+        return;
+      } catch (directQueryError) {
+        console.error('❌ Direct contact lists query failed, trying Edge Function:', directQueryError);
+      }
+      
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/contacts-operations/lists?businessId=${businessId}`, {
         headers: {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
@@ -134,6 +226,8 @@ const Contacts: React.FC = () => {
       });
       
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Contact lists Edge Function response error:', response.status, response.statusText, errorText);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
@@ -144,11 +238,19 @@ const Contacts: React.FC = () => {
           id: list.id,
           name: list.name
         })));
+        console.log('✅ Successfully loaded contact lists via Edge Function:', data.data.length);
       } else {
         console.error('Failed to fetch contact lists:', data?.error);
       }
     } catch (error) {
       console.error('Error fetching contact lists:', error);
+      
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        console.error('🌐 Network connectivity issue detected when fetching contact lists');
+      }
+      
+      // Set empty array as fallback
+      setAvailableContactLists([]);
     }
   };
 
