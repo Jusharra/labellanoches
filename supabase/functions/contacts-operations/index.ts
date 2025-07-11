@@ -144,32 +144,54 @@ Deno.serve(async (req) => {
         const cleanBusinessId = sanitizeUUID(businessId);
         const cleanCreatedBy = sanitizeUUID(createdBy);
 
-        if (!cleanBusinessId || !cleanCreatedBy) {
-          // Attempt to derive business_id and created_by from auth if not provided or invalid
-          const { data: { user } } = await supabaseClient.auth.getUser();
-          if (user) {
-            const { data: profile, error: profileError } = await supabaseClient
-              .from('user_profiles')
-              .select('business_id')
-              .eq('id', user.id)
+        // Define a default business_id if none provided (for public opt-ins)
+        let finalBusinessId = cleanBusinessId;
+        let finalCreatedBy = cleanCreatedBy;
+
+        if (!finalBusinessId) {
+          console.log("No business_id provided. Attempting to find default business...");
+          // For public opt-ins, try to find La Bella Noches business
+          const { data: defaultBusiness, error: businessError } = await supabaseClient
+            .from('businesses')
+            .select('id')
+            .eq('name', 'La Bella Noches')
+            .single();
+            
+          if (businessError) {
+            console.error("Error finding default business:", businessError);
+          } else if (defaultBusiness) {
+            console.log("Found default business:", defaultBusiness.id);
+            finalBusinessId = defaultBusiness.id;
+          }
+          
+          // If still no business_id, try to find any business
+          if (!finalBusinessId) {
+            const { data: anyBusiness, error: anyBusinessError } = await supabaseClient
+              .from('businesses')
+              .select('id')
+              .limit(1)
               .single();
-            if (profile && !profileError) {
-              payload.businessId = profile.business_id;
-              payload.createdBy = user.id;
+              
+            if (anyBusinessError) {
+              console.error("Error finding any business:", anyBusinessError);
+            } else if (anyBusiness) {
+              console.log("Using first available business:", anyBusiness.id);
+              finalBusinessId = anyBusiness.id;
             }
           }
         }
 
-        // Re-sanitize after potential derivation
-        const finalBusinessId = sanitizeUUID(payload.businessId);
-        const finalCreatedBy = sanitizeUUID(payload.createdBy);
-
-        if (!finalBusinessId || !finalCreatedBy) {
+        // For public opt-ins, if we still don't have a businessId, we can't proceed
+        if (!finalBusinessId) {
+          console.error("No business_id could be determined for contact creation");
           return new Response(
-            JSON.stringify({ success: false, error: 'Business ID or Created By user ID is missing or invalid.' }),
+            JSON.stringify({ success: false, error: 'Could not determine business ID. Please contact support.' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 },
           );
         }
+
+        // For createdBy, it's optional for public opt-ins
+        // If not provided, it will be NULL in the database
 
         // Check for existing contact with the same phone number for the same business
         const { data: existingContact, error: existingContactError } = await supabaseClient
@@ -195,12 +217,14 @@ Deno.serve(async (req) => {
           .from('contacts')
           .insert({
             name: name || null,
-            phone_number: phoneNumber,
+            phone_number: phoneNumber, 
+            whatsapp_number: payload.whatsappNumber || null,
             email: email || null,
             opted_in: smsOptIn || false,
             language: preferredLanguage || 'English',
             tags: tags || [],
             business_id: finalBusinessId,
+            created_by: finalCreatedBy || null, // Allow null for public opt-ins
           })
           .select()
           .single();
@@ -220,11 +244,17 @@ Deno.serve(async (req) => {
           if (membersToInsert.length > 0) {
             const { error: membersInsertError } = await supabaseClient
               .from('contact_list_members')
-              .insert(membersToInsert);
+              .upsert(membersToInsert, {
+                onConflict: 'contact_id,contact_list_id',
+                ignoreDuplicates: true
+              });
 
             if (membersInsertError) {
               console.error('Error adding contact to lists:', membersInsertError);
-              // Log error but don't fail the whole contact creation
+              console.log('Attempt to add contact to lists failed:', membersInsertError.message);
+              console.log('Contact list members payload:', membersToInsert);
+            } else {
+              console.log(`Successfully added contact to ${membersToInsert.length} list(s)`);
             }
           }
         }
@@ -335,7 +365,10 @@ Deno.serve(async (req) => {
             if (membersToInsert.length > 0) {
               const { error: insertMembersError } = await supabaseClient
                 .from('contact_list_members')
-                .insert(membersToInsert);
+                .upsert(membersToInsert, {
+                  onConflict: 'contact_id,contact_list_id',
+                  ignoreDuplicates: true
+                });
 
               if (insertMembersError) {
                 console.error('Error inserting new contact list members:', insertMembersError);
@@ -631,6 +664,8 @@ Deno.serve(async (req) => {
         if (insertError) {
           console.error('Error adding contact to list:', insertError);
           throw new Error(`Failed to add contact to list: ${insertError.message}`);
+        } else {
+          console.log(`Contact ${cleanContactId} successfully added to list ${cleanListId}`);
         }
 
         return new Response(
