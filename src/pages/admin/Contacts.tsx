@@ -202,7 +202,7 @@ const Contacts: React.FC = () => {
         console.log('🔄 Attempting direct Supabase query for contact lists...');
         const { data: contactListsData, error: contactListsError } = await supabase
           .from('contact_lists')
-          .select('id, list_name as name')
+          .select('id, list_name:name')
           .eq('business_id', businessId)
           .order('created_at', { ascending: false });
 
