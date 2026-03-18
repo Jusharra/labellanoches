@@ -100,8 +100,10 @@ const categories = [
 const Menu = () => {
   const [activeCategory, setActiveCategory] = useState('starters');
   const [bookingData, setBookingData] = useState({
+    bookingType: 'Reservation',
     name: '',
     phone: '',
+    email: '',
     date: '',
     time: '',
     partySize: '2',
@@ -139,13 +141,25 @@ const Menu = () => {
       const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...bookingData, submittedAt: new Date().toISOString() }),
+        body: JSON.stringify({
+            bookingType: bookingData.bookingType,
+            customerName: bookingData.name,
+            phoneNumber: bookingData.phone,
+            email: bookingData.email || null,
+            requestedDate: bookingData.date,
+            preferredTime: bookingData.time,
+            partySize: bookingData.bookingType === 'Reservation' ? bookingData.partySize : null,
+            specialRequests: bookingData.requests || null,
+            bookingStatus: 'New',
+            source: 'Website',
+            createdAt: new Date().toISOString(),
+          }),
       });
 
       if (!response.ok) throw new Error(`Webhook error: ${response.status}`);
 
       setBookingSubmitted(true);
-      toast.success('Reservation request received! We\'ll confirm shortly via SMS.');
+      toast.success(`${bookingData.bookingType} request received! We'll confirm shortly via SMS.`);
     } catch (error: any) {
       console.error('Booking error:', error);
       if (error.message === 'not configured') {
@@ -263,7 +277,7 @@ const Menu = () => {
                   We'll confirm your table via SMS within a few minutes.
                 </p>
                 <button
-                  onClick={() => { setBookingSubmitted(false); setBookingData({ name: '', phone: '', date: '', time: '', partySize: '2', requests: '' }); }}
+                  onClick={() => { setBookingSubmitted(false); setBookingData({ bookingType: 'Reservation', name: '', phone: '', email: '', date: '', time: '', partySize: '2', requests: '' }); }}
                   className="bg-primary text-white py-2 px-6 rounded-lg font-semibold hover:bg-primary/90 transition-colors text-sm"
                 >
                   Make Another Reservation
@@ -271,6 +285,32 @@ const Menu = () => {
               </div>
             ) : (
               <form onSubmit={handleBookingSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+
+                {/* Booking Type — full width */}
+                <div className="sm:col-span-2">
+                  <label htmlFor="res-type" className="block text-sm font-medium text-accent dark:text-white mb-1">
+                    Booking Type *
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['Reservation', 'Service', 'Pickup'] as const).map(type => (
+                      <button
+                        key={type}
+                        type="button"
+                        disabled={bookingLoading}
+                        onClick={() => setBookingData(prev => ({ ...prev, bookingType: type }))}
+                        className={`py-2 sm:py-3 rounded-lg text-sm font-semibold border-2 transition-colors disabled:opacity-50 ${
+                          bookingData.bookingType === type
+                            ? 'bg-primary text-white border-primary'
+                            : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-primary hover:text-primary'
+                        }`}
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Customer Name */}
                 <div>
                   <label htmlFor="res-name" className="block text-sm font-medium text-accent dark:text-white mb-1">
                     Name *
@@ -287,6 +327,7 @@ const Menu = () => {
                   />
                 </div>
 
+                {/* Phone */}
                 <div>
                   <label htmlFor="res-phone" className="block text-sm font-medium text-accent dark:text-white mb-1">
                     Phone (for SMS confirmation) *
@@ -304,9 +345,27 @@ const Menu = () => {
                   />
                 </div>
 
+                {/* Email */}
+                <div className="sm:col-span-2">
+                  <label htmlFor="res-email" className="block text-sm font-medium text-accent dark:text-white mb-1">
+                    Email (optional)
+                  </label>
+                  <input
+                    type="email"
+                    id="res-email"
+                    name="email"
+                    disabled={bookingLoading}
+                    placeholder="you@example.com"
+                    className="w-full px-4 py-2 sm:py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:opacity-50 text-sm sm:text-base"
+                    value={bookingData.email}
+                    onChange={handleBookingChange}
+                  />
+                </div>
+
+                {/* Date */}
                 <div>
                   <label htmlFor="res-date" className="block text-sm font-medium text-accent dark:text-white mb-1">
-                    Date *
+                    Requested Date *
                   </label>
                   <input
                     type="date"
@@ -321,6 +380,7 @@ const Menu = () => {
                   />
                 </div>
 
+                {/* Time */}
                 <div>
                   <label htmlFor="res-time" className="block text-sm font-medium text-accent dark:text-white mb-1">
                     Preferred Time *
@@ -337,27 +397,31 @@ const Menu = () => {
                   />
                 </div>
 
-                <div>
-                  <label htmlFor="res-party" className="block text-sm font-medium text-accent dark:text-white mb-1">
-                    Party Size *
-                  </label>
-                  <select
-                    id="res-party"
-                    name="partySize"
-                    required
-                    disabled={bookingLoading}
-                    className="w-full px-4 py-2 sm:py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:opacity-50 text-sm sm:text-base"
-                    value={bookingData.partySize}
-                    onChange={handleBookingChange}
-                  >
-                    {[1,2,3,4,5,6,7,8,9,10].map(n => (
-                      <option key={n} value={String(n)}>{n} {n === 1 ? 'guest' : 'guests'}</option>
-                    ))}
-                    <option value="10+">10+ guests (please call us)</option>
-                  </select>
-                </div>
+                {/* Party Size — only for Reservation */}
+                {bookingData.bookingType === 'Reservation' && (
+                  <div className="sm:col-span-2">
+                    <label htmlFor="res-party" className="block text-sm font-medium text-accent dark:text-white mb-1">
+                      Party Size *
+                    </label>
+                    <select
+                      id="res-party"
+                      name="partySize"
+                      required
+                      disabled={bookingLoading}
+                      className="w-full px-4 py-2 sm:py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:opacity-50 text-sm sm:text-base"
+                      value={bookingData.partySize}
+                      onChange={handleBookingChange}
+                    >
+                      {[1,2,3,4,5,6,7,8,9,10].map(n => (
+                        <option key={n} value={String(n)}>{n} {n === 1 ? 'guest' : 'guests'}</option>
+                      ))}
+                      <option value="10+">10+ guests (please call us)</option>
+                    </select>
+                  </div>
+                )}
 
-                <div>
+                {/* Special Requests */}
+                <div className="sm:col-span-2">
                   <label htmlFor="res-requests" className="block text-sm font-medium text-accent dark:text-white mb-1">
                     Special Requests (optional)
                   </label>
