@@ -1,129 +1,60 @@
-import React, { useState, useEffect } from 'react';
-import { Phone, Mail, Building2, MessageSquare, Check } from 'lucide-react';
-import { useSupabase } from '../context/SupabaseContext';
+import React, { useState } from 'react';
+import { Phone, Mail, MessageSquare, Check, Cake } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const SMSOptInForm = () => {
-  const { supabase } = useSupabase();
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [vipListId, setVipListId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
     whatsapp: '',
     email: '',
+    birthday: '',
     permission: false,
   });
 
-  // Fetch the VIP Club contact list ID when component mounts
-  useEffect(() => {
-    const fetchVipListId = async () => {
-      if (!supabase) return;
-      
-      try {
-        // Look for a contact list with "VIP" or "Club" in the name
-        const { data, error } = await supabase
-          .from('contact_lists')
-          .select('id, list_name')
-          .or('list_name.ilike.%VIP%,list_name.ilike.%Club%')
-          .order('created_at', { ascending: false })
-          .limit(1);
-
-        if (error) {
-          console.error('Error fetching VIP contact list:', error);
-          return;
-        }
-
-        if (data && data.length > 0) {
-          console.log('Found VIP list:', data[0]);
-          setVipListId(data[0].id);
-        } else {
-          console.log('No VIP list found');
-        }
-      } catch (error) {
-        console.error('Error in fetchVipListId:', error);
-      }
-    };
-
-    fetchVipListId();
-  }, [supabase]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.permission) {
       toast.error('Please agree to receive text messages to continue.');
       return;
     }
 
     setLoading(true);
-    
+
     try {
-      // Prepare payload for contact creation
-      const payload: any = {
-        name: formData.name,
-        phoneNumber: formData.phone,
-        email: formData.email || null,
-        smsOptIn: formData.permission,
-        preferredLanguage: 'English',
-        tags: ['VIP Club', 'SMS Opt-in']
-      };
-      
-      // If we found a VIP list ID, include it in the payload
-      if (vipListId) {
-        console.log('Adding contact to VIP list:', vipListId);
-        payload.contactListIds = [vipListId];
-      }
-      
-      // If WhatsApp number was provided, add it to payload
-      if (formData.whatsapp) {
-        payload.whatsappNumber = formData.whatsapp;
+      const webhookUrl = import.meta.env.VITE_MAKE_OPTIN_WEBHOOK_URL;
+      if (!webhookUrl || webhookUrl.includes('YOUR_')) {
+        throw new Error('Opt-in webhook not configured. Please set VITE_MAKE_OPTIN_WEBHOOK_URL in .env');
       }
 
-      // Find business ID for La Bella Noches
-      if (supabase) {
-        const { data: businesses, error: businessError } = await supabase
-          .from('businesses')
-          .select('id')
-          .eq('name', 'La Bella Noches')
-          .limit(1);
-          
-        if (!businessError && businesses && businesses.length > 0) {
-          payload.businessId = businesses[0].id;
-        }
-      }
-
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/contacts-operations/contacts`, {
+      const response = await fetch(webhookUrl, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          phone: formData.phone,
+          whatsapp: formData.whatsapp || null,
+          email: formData.email || null,
+          birthday: formData.birthday || null,
+          optIn: true,
+          source: 'website-vip-form',
+          submittedAt: new Date().toISOString(),
+        }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        throw new Error(`Webhook error: ${response.status}`);
       }
 
-      const data = await response.json();
-      
-      if (data.success) {
-        console.log('Contact created successfully:', data.data);
-        setSubmitted(true);
-        toast.success('Welcome to La Bella Noches VIP Club! You\'ll receive 10% off your first order.');
-      } else {
-        throw new Error(data.error || 'Failed to save contact information');
-      }
-      
-    } catch (error) {
-      console.error('Error submitting form:', error);
-      
-      // Check if it's a duplicate phone number error
-      if (error.message.includes('duplicate') || error.message.includes('already exists')) {
-        toast.error('This phone number is already registered. Thank you for being a VIP member!');
+      setSubmitted(true);
+      toast.success("Welcome to La Bella Noches VIP Club! You'll receive 10% off your first order.");
+    } catch (error: any) {
+      console.error('Error submitting opt-in form:', error);
+      if (error.message.includes('not configured')) {
+        toast.error('Sign-up is temporarily unavailable. Please call us to join the VIP Club.');
       } else {
         toast.error('There was an error submitting the form. Please try again.');
       }
@@ -136,7 +67,7 @@ const SMSOptInForm = () => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox' ? checked : value,
     }));
   };
 
@@ -237,6 +168,22 @@ const SMSOptInForm = () => {
             disabled={loading}
             className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:opacity-50 text-sm sm:text-base"
             value={formData.email}
+            onChange={handleChange}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="birthday" className="flex items-center text-sm font-medium text-accent dark:text-white mb-1 sm:mb-2">
+            <Cake className="w-4 h-4 mr-2" />
+            Birthday (optional)
+          </label>
+          <input
+            type="date"
+            id="birthday"
+            name="birthday"
+            disabled={loading}
+            className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:opacity-50 text-sm sm:text-base"
+            value={formData.birthday}
             onChange={handleChange}
           />
         </div>

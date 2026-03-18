@@ -12,16 +12,34 @@ const Contact = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // In a real application, you would send this data to your backend
-    // For now, we'll just simulate a successful submission
+
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const webhookUrl = import.meta.env.VITE_MAKE_CONTACT_WEBHOOK_URL;
+      if (!webhookUrl || webhookUrl.includes('YOUR_')) {
+        throw new Error('not configured');
+      }
+
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          message: formData.message,
+          submittedAt: new Date().toISOString(),
+        }),
+      });
+
+      if (!response.ok) throw new Error(`Webhook error: ${response.status}`);
+
       setIsSubmitted(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting form:', error);
-      toast.error('There was an error submitting the form. Please try again.');
+      if (error.message === 'not configured') {
+        toast.error('Contact form is temporarily unavailable. Please email us directly.');
+      } else {
+        toast.error('There was an error submitting the form. Please try again.');
+      }
     }
   };
 

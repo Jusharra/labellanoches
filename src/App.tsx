@@ -8,6 +8,7 @@ import About from './pages/About';
 import Contact from './pages/Contact';
 import TermsOfService from './pages/TermsOfService';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import OwnerDashboard from './pages/OwnerDashboard';
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
             <Route path="contact" element={<Contact />} />
             <Route path="terms" element={<TermsOfService />} />
             <Route path="privacy" element={<PrivacyPolicy />} />
+            <Route path="owner" element={<OwnerDashboard />} />
           </Route>
         </Routes>
       </Router>
