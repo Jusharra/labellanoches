@@ -11,6 +11,7 @@ const SMSOptInForm = () => {
     whatsapp: '',
     email: '',
     birthday: '',
+    preferredContactMethod: 'SMS + Email',
     permission: false,
   });
 
@@ -39,6 +40,7 @@ const SMSOptInForm = () => {
           whatsapp: formData.whatsapp || null,
           email: formData.email || null,
           birthday: formData.birthday || null,
+          preferredContactMethod: formData.preferredContactMethod,
           optIn: true,
           source: 'website-vip-form',
           submittedAt: new Date().toISOString(),
@@ -63,8 +65,9 @@ const SMSOptInForm = () => {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
@@ -186,6 +189,26 @@ const SMSOptInForm = () => {
             value={formData.birthday}
             onChange={handleChange}
           />
+        </div>
+
+        <div>
+          <label htmlFor="preferredContactMethod" className="flex items-center text-sm font-medium text-accent dark:text-white mb-1 sm:mb-2">
+            <Phone className="w-4 h-4 mr-2" />
+            Preferred Contact Method *
+          </label>
+          <select
+            id="preferredContactMethod"
+            name="preferredContactMethod"
+            required
+            disabled={loading}
+            className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:opacity-50 text-sm sm:text-base"
+            value={formData.preferredContactMethod}
+            onChange={handleChange}
+          >
+            <option value="SMS + Email">SMS + Email</option>
+            <option value="Call">Call</option>
+            <option value="Email">Email</option>
+          </select>
         </div>
 
         <div className="flex items-start">
